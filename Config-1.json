@@ -1,0 +1,59 @@
+{
+    "numOfDepts": 2,
+    "numOfMobilesPerDept": 5,
+    "cloudResources": {
+        "cpu": 44800,
+        "memory": 40000,
+        "storage": 1000000,
+        "bandwidth": 10000
+    },
+    "proxyResources": {
+        "cpu": 2800,
+        "memory": 4000,
+        "storage": 500000,
+        "bandwidth": 10000
+    },
+    "edgeResources": {
+        "cpu": 1000,
+        "memory": 1000,
+        "storage": 100000,
+        "bandwidth": 1000
+    },
+    "applicationModules": [
+        {
+            "name": "client",
+            "requiredCpu": 10,
+            "requiredMemory": 100
+        },
+        {
+            "name": "concentration_calculator",
+            "requiredCpu": 10,
+            "requiredMemory": 200
+        },
+        {
+            "name": "connector",
+            "requiredCpu": 10,
+            "requiredMemory": 150
+        }
+    ],
+    "dataFlows": [
+        {
+            "source": "client",
+            "destination": "concentration_calculator",
+            "dataSize": 3500,
+            "cpuLoad": 0.5
+        },
+        {
+            "source": "concentration_calculator",
+            "destination": "connector",
+            "dataSize": 100,
+            "cpuLoad": 0.2
+        },
+        {
+            "source": "connector",
+            "destination": "client",
+            "dataSize": 100,
+            "cpuLoad": 0.3
+        }
+    ]
+}
