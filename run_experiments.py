@@ -69,7 +69,7 @@ def run_experiment(strategy, config, duration=60):
     os.environ["CONFIG_NAME"] = config
     
     # Start the containers
-    subprocess.run(["docker-compose", "up", "-d"])
+    subprocess.run(["docker-compose", "up", "-d", "--build"])
     
     # Wait for containers to initialize
     print("Waiting for containers to initialize...")
