@@ -1,4 +1,5 @@
-flask==2.0.1
-requests==2.26.0
-psutil==5.8.0
-pyyaml==6.0
+flask
+requests
+matplotlib
+pandas
+numpy
