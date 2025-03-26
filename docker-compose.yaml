@@ -6,6 +6,12 @@ services:
       - cloud_proxy_net
     cap_add:
       - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
@@ -23,6 +29,15 @@ services:
       - NET_ADMIN
     ports:
       - "9090:9090"
+    depends_on:
+      cloud:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
@@ -41,6 +56,15 @@ services:
       - NET_ADMIN
     ports:
       - "9091:9090"
+    depends_on:
+      proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
@@ -59,6 +83,15 @@ services:
       - NET_ADMIN
     ports:
       - "9092:9090"
+    depends_on:
+      proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
@@ -74,10 +107,21 @@ services:
       - gateway1_mobiles_net
     environment:
       - GATEWAY=gateway1
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
     ports:
       - "9093:9090"
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
@@ -95,6 +139,9 @@ services:
       - GATEWAY=gateway1
     cap_add:
       - NET_ADMIN
+    volumes:
+      - ./logs/mobile1_2:/app/logs
+      - ./config:/app/config
 
   mobile1_3:
     build: ./mobile
@@ -104,6 +151,9 @@ services:
       - GATEWAY=gateway1
     cap_add:
       - NET_ADMIN
+    volumes:
+      - ./logs/mobile1_3:/app/logs
+      - ./config:/app/config
 
   mobile1_4:
     build: ./mobile
@@ -113,6 +163,9 @@ services:
       - GATEWAY=gateway1
     cap_add:
       - NET_ADMIN
+    volumes:
+      - ./logs/mobile1_4:/app/logs
+      - ./config:/app/config
 
   mobile2_1:
     build: ./mobile
@@ -122,6 +175,9 @@ services:
       - GATEWAY=gateway2
     cap_add:
       - NET_ADMIN
+    volumes:
+      - ./logs/mobile2_1:/app/logs
+      - ./config:/app/config
 
   mobile2_2:
     build: ./mobile
@@ -131,6 +187,9 @@ services:
       - GATEWAY=gateway2
     cap_add:
       - NET_ADMIN
+    volumes:
+      - ./logs/mobile2_2:/app/logs
+      - ./config:/app/config
 
   mobile2_3:
     build: ./mobile
@@ -140,6 +199,9 @@ services:
       - GATEWAY=gateway2
     cap_add:
       - NET_ADMIN
+    volumes:
+      - ./logs/mobile2_3:/app/logs
+      - ./config:/app/config
 
   mobile2_4:
     build: ./mobile
@@ -149,6 +211,9 @@ services:
       - GATEWAY=gateway2
     cap_add:
       - NET_ADMIN
+    volumes:
+      - ./logs/mobile2_4:/app/logs
+      - ./config:/app/config
 
   prometheus:
     image: prom/prometheus:latest
