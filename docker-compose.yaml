@@ -1,80 +1,204 @@
-name: CS300-test
-
+name: CS300
 services:
   cloud:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - NODE_TYPE=CLOUD
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-GVMP}
-      - CONFIG_NAME=${CONFIG_NAME:-Config-1}
-      - PORT=8080
-    volumes:
-      - ./config:/app/config
-      - ./logs/cloud:/app/logs
+    image: nginx
     networks:
-      - fog-network
+      - cloud_proxy_net
+    cap_add:
+      - NET_ADMIN
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./logs/cloud:/var/log/nginx
 
   proxy:
-    build: .
-    ports:
-      - "8081:8080"
-    environment:
-      - NODE_TYPE=PROXY
-      - PARENT_HOST=cloud
-      - PARENT_PORT=8080
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-GVMP}
-      - CONFIG_NAME=${CONFIG_NAME:-Config-1}
-      - PORT=8080
-    volumes:
-      - ./config:/app/config
-      - ./logs/proxy:/app/logs
-    depends_on:
-      - cloud
+    build: ./proxy
     networks:
-      - fog-network
-
-  edge1:
-    build: .
+      - cloud_proxy_net
+      - proxy_gateways_net
+    cap_add:
+      - NET_ADMIN
     ports:
-      - "8082:8080"
-    environment:
-      - NODE_TYPE=EDGE
-      - NODE_ID=1
-      - PARENT_HOST=proxy
-      - PARENT_PORT=8080
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-GVMP}
-      - CONFIG_NAME=${CONFIG_NAME:-Config-1}
-      - PORT=8080
+      - "9090:9090"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
+      - ./logs/proxy:/var/log/nginx
       - ./config:/app/config
+
+  gateway1:
+    build: ./gateway
+    networks:
+      - proxy_gateways_net
+      - gateway1_mobiles_net
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "9091:9090"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
       - ./logs/edge1:/app/logs
-    depends_on:
-      - proxy
-    networks:
-      - fog-network
-
-  edge2:
-    build: .
-    ports:
-      - "8083:8080"
-    environment:
-      - NODE_TYPE=EDGE
-      - NODE_ID=2
-      - PARENT_HOST=proxy
-      - PARENT_PORT=8080
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-GVMP}
-      - CONFIG_NAME=${CONFIG_NAME:-Config-1}
-      - PORT=8080
-    volumes:
       - ./config:/app/config
-      - ./logs/edge2:/app/logs
-    depends_on:
-      - proxy
+
+  gateway2:
+    build: ./gateway
     networks:
-      - fog-network
+      - proxy_gateways_net
+      - gateway2_mobiles_net
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "9092:9090"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./logs/edge2:/app/logs
+      - ./config:/app/config
+
+  mobile1_1:
+    build: ./mobile
+    networks:
+      - gateway1_mobiles_net
+    environment:
+      - GATEWAY=gateway1
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "9093:9090"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./logs/mobile1_1:/app/logs
+      - ./config:/app/config
+
+  mobile1_2:
+    build: ./mobile
+    networks:
+      - gateway1_mobiles_net
+    environment:
+      - GATEWAY=gateway1
+    cap_add:
+      - NET_ADMIN
+
+  mobile1_3:
+    build: ./mobile
+    networks:
+      - gateway1_mobiles_net
+    environment:
+      - GATEWAY=gateway1
+    cap_add:
+      - NET_ADMIN
+
+  mobile1_4:
+    build: ./mobile
+    networks:
+      - gateway1_mobiles_net
+    environment:
+      - GATEWAY=gateway1
+    cap_add:
+      - NET_ADMIN
+
+  mobile2_1:
+    build: ./mobile
+    networks:
+      - gateway2_mobiles_net
+    environment:
+      - GATEWAY=gateway2
+    cap_add:
+      - NET_ADMIN
+
+  mobile2_2:
+    build: ./mobile
+    networks:
+      - gateway2_mobiles_net
+    environment:
+      - GATEWAY=gateway2
+    cap_add:
+      - NET_ADMIN
+
+  mobile2_3:
+    build: ./mobile
+    networks:
+      - gateway2_mobiles_net
+    environment:
+      - GATEWAY=gateway2
+    cap_add:
+      - NET_ADMIN
+
+  mobile2_4:
+    build: ./mobile
+    networks:
+      - gateway2_mobiles_net
+    environment:
+      - GATEWAY=gateway2
+    cap_add:
+      - NET_ADMIN
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9095:9090"
+    networks:
+      - monitoring_net
+      - cloud_proxy_net
+      - proxy_gateways_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./config/grafana.yml:/etc/grafana/grafana.ini
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring_net
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
-  fog-network:
-    driver: bridge
+  cloud_proxy_net:
+  proxy_gateways_net:
+  gateway1_mobiles_net:
+  gateway2_mobiles_net:
+  monitoring_net:
+
+volumes:
+  prometheus_data:
+  grafana_data:

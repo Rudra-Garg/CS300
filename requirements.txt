@@ -1,5 +1,7 @@
 flask
 requests
 matplotlib
-pandas
-numpy
+psutil
+python-json-logger==2.0.7
+prometheus-client==0.17.1
+flask-prometheus-metrics==1.0.0
