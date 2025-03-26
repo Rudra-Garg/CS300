@@ -12,7 +12,11 @@ from client_module import ClientModule
 # Load logging configuration
 with open('/app/config/logging.yaml', 'r') as f:
     config = yaml.safe_load(f)
-    config['handlers']['file']['filename'] = config['handlers']['file']['filename'] % {'container_name': os.getenv('HOSTNAME', 'unknown')}
+    # Ensure log directory exists
+    log_dir = '/app/logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    config['handlers']['file']['filename'] = os.path.join(log_dir, 'app.log')
     logging.config.dictConfig(config)
 
 logger = logging.getLogger('mobile')
