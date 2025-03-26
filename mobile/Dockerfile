@@ -19,7 +19,7 @@ WORKDIR /app
 
 # Copy application files
 COPY mobile.py /app/
-COPY client_module_impl.py /app/
+COPY client_module.py /app/
 
 # Create directory for logs
 RUN mkdir -p /app/logs

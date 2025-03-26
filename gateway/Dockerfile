@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Copy application files
 COPY gateway.py /app/
-COPY concentration_calculator_module_impl.py /app/
+COPY concentration_calculator_module.py /app/
 
 # Create directory for logs
 RUN mkdir -p /app/logs
