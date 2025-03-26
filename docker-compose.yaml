@@ -1,7 +1,7 @@
 name: CS300
 services:
   cloud:
-    image: nginx
+    build: ./cloud
     networks:
       - cloud_proxy_net
     cap_add:
