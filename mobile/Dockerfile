@@ -21,14 +21,8 @@ WORKDIR /app
 COPY mobile.py /app/
 COPY client_module.py /app/
 
-# Create directory for logs
-RUN mkdir -p /app/logs
-
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD curl -f http://localhost:8080/health || exit 1
-
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
+# Command to run
 CMD ["python", "mobile.py"]

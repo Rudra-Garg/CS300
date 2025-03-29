@@ -4,22 +4,8 @@ import requests
 import json
 import random
 import numpy as np
-import logging.config
-import yaml
 from prometheus_client import Counter, Gauge, start_http_server
 from client_module import ClientModule
-
-# Load logging configuration
-with open('/app/config/logging.yaml', 'r') as f:
-    config = yaml.safe_load(f)
-    # Ensure log directory exists
-    log_dir = '/app/logs'
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    config['handlers']['file']['filename'] = os.path.join(log_dir, 'app.log')
-    logging.config.dictConfig(config)
-
-logger = logging.getLogger('mobile')
 
 # Prometheus metrics
 EEG_DATA_PROCESSED = Counter('eeg_data_processed_total', 'Total number of EEG data points processed')
@@ -81,7 +67,7 @@ class GatewayConnector:
     def send_data(self, data):
         """Send data to gateway with retry mechanism"""
         if not data:
-            logger.info("No data to send")
+            print("No data to send")
             return None
 
         for attempt in range(self.max_retries):
@@ -100,17 +86,17 @@ class GatewayConnector:
                 return result
                 
             except requests.exceptions.RequestException as e:
-                logger.warning(f"Attempt {attempt + 1}/{self.max_retries} failed: {str(e)}")
+                print(f"Attempt {attempt + 1}/{self.max_retries} failed: {str(e)}")
                 GATEWAY_REQUEST_FAILURES.inc()
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay * (attempt + 1))  # Exponential backoff
                 continue
             except Exception as e:
-                logger.error(f"Unexpected error: {str(e)}")
+                print(f"Unexpected error: {str(e)}")
                 GATEWAY_REQUEST_FAILURES.inc()
                 return None
         
-        logger.error("Failed to send data after all retries")
+        print("Failed to send data after all retries")
         GATEWAY_REQUEST_FAILURES.inc()
         return None
 
@@ -120,7 +106,7 @@ client_module = ClientModule()
 gateway_connector = GatewayConnector(url)
 
 if __name__ == '__main__':
-    logger.info(f"Mobile client started - connecting to gateway at {url}")
+    print(f"Mobile client started - connecting to gateway at {url}")
     
     while True:
         try:
