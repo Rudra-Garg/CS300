@@ -208,7 +208,7 @@ services:
     ports:
       - "9097:9090" 
     depends_on:
-      gateway1:
+      gateway2:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
@@ -230,7 +230,7 @@ services:
     ports:
       - "9098:9090" 
     depends_on:
-      gateway1:
+      gateway2:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
@@ -252,7 +252,7 @@ services:
     ports:
       - "9099:9090" 
     depends_on:
-      gateway1:
+      gateway2:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
@@ -274,7 +274,7 @@ services:
     ports:
       - "9100:9090" 
     depends_on:
-      gateway1:
+      gateway2:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
