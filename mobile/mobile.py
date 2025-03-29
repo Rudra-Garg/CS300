@@ -4,16 +4,25 @@ import requests
 import json
 import random
 import numpy as np
-from prometheus_client import Counter, Gauge, start_http_server
+from prometheus_client import Counter, Gauge, start_http_server, make_wsgi_app
 from client_module import ClientModule
+from flask import Flask
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+
+app = Flask(__name__)
 
 # Prometheus metrics
 EEG_DATA_PROCESSED = Counter('eeg_data_processed_total', 'Total number of EEG data points processed')
 GATEWAY_REQUEST_LATENCY = Gauge('gateway_request_latency_seconds', 'Gateway request latency in seconds')
 GATEWAY_REQUEST_FAILURES = Counter('gateway_request_failures_total', 'Total number of failed gateway requests')
 
-# Start Prometheus metrics server
-start_http_server(9090)
+# Add metrics endpoint to the Flask app
+app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
+    '/metrics': make_wsgi_app()
+})
+
+# Remove the separate metrics server start
+# start_http_server(9090)  # Remove this line
 
 gateway = os.getenv('GATEWAY')
 url = f'http://{gateway}:8000/'

@@ -3,21 +3,20 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: "mobile1_1"
+  - job_name: mobile
     static_configs:
-      - targets: ["mobile1_1:9090"]
-    metrics_path: /metrics
+      - targets:
+          - mobile1_1:9090
+          - mobile1_2:9090
+          - mobile1_3:9090
+          - mobile1_4:9090
+          - mobile2_1:9090
+          - mobile2_2:9090
+          - mobile2_3:9090
+          - mobile2_4:9090
 
-  - job_name: "mobile1_2"
+  - job_name: gateway
     static_configs:
-      - targets: ["mobile1_2:9090"]
-
-  - job_name: "gateway1"
-    static_configs:
-      - targets: ["gateway1:8000"]
-    metrics_path: /metrics
-
-  - job_name: "gateway2"
-    static_configs:
-      - targets: ["gateway2:8000"]
-    metrics_path: /metrics
+      - targets:
+          - gateway1:8000
+          - gateway2:8000
