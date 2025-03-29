@@ -4,10 +4,14 @@ import requests
 import json
 import random
 import numpy as np
-from prometheus_client import Counter, Gauge, start_http_server, make_wsgi_app
+from prometheus_client import start_http_server, make_wsgi_app
 from client_module import ClientModule
 from flask import Flask
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from metrics import (
+    EEG_DATA_PROCESSED, GATEWAY_REQUEST_LATENCY, GATEWAY_REQUEST_FAILURES,
+    EEG_QUALITY_SCORE, EEG_DISCARDED_TOTAL, EEG_ALPHA_POWER, EEG_NOISE_LEVEL
+)
 
 app = Flask(__name__)
 
@@ -16,14 +20,6 @@ app = Flask(__name__)
 def health_check():
     return 'healthy', 200
 
-# Prometheus metrics
-EEG_DATA_PROCESSED = Counter('eeg_data_processed_total', 'Total number of EEG data points processed')
-GATEWAY_REQUEST_LATENCY = Gauge('gateway_request_latency_seconds', 'Gateway request latency in seconds')
-GATEWAY_REQUEST_FAILURES = Counter('gateway_request_failures_total', 'Total number of failed gateway requests')
-EEG_QUALITY_SCORE = Gauge('eeg_quality_score', 'Current EEG signal quality score')
-EEG_DISCARDED_TOTAL = Counter('eeg_discarded_total', 'Total number of discarded EEG data points')
-EEG_ALPHA_POWER = Gauge('eeg_alpha_power', 'Current alpha wave power in EEG signal')
-EEG_NOISE_LEVEL = Gauge('eeg_noise_level', 'Current noise level in EEG signal')
 
 # Add metrics endpoint to the Flask app
 app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
