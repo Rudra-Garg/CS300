@@ -223,17 +223,13 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'  # Add this line
     ports:
       - "9095:9090"
     networks:
       - monitoring_net
       - cloud_proxy_net
       - proxy_gateways_net
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   grafana:
     image: grafana/grafana:latest
@@ -249,6 +245,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
     logging:
       driver: "json-file"
       options:
