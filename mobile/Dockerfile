@@ -20,6 +20,7 @@ WORKDIR /app
 # Copy application files
 COPY mobile.py /app/
 COPY client_module.py /app/
+COPY metrics.py /app/
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
