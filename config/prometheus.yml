@@ -4,6 +4,7 @@ global:
 
 scrape_configs:
   - job_name: mobile
+    metrics_path: /metrics    # Add this line
     static_configs:
       - targets:
           - mobile1_1:9090
@@ -16,7 +17,7 @@ scrape_configs:
           - mobile2_4:9090
 
   - job_name: gateway
-    
+    metrics_path: /metrics    # Add this line
     static_configs:
       - targets:
           - gateway1:8000
