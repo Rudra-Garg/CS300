@@ -2,6 +2,7 @@
 import json
 import time
 from typing import Dict, Any, Union, Optional
+from mobile import EEG_QUALITY_SCORE, EEG_DISCARDED_TOTAL, EEG_ALPHA_POWER, EEG_NOISE_LEVEL
 
 class ClientModule:
     def __init__(self):
@@ -40,9 +41,21 @@ class ClientModule:
                 return None
 
             # Quality check on EEG values
+            quality_score = self._calculate_quality_score(eeg_values)
+            EEG_QUALITY_SCORE.set(quality_score)
+            
             if not self._check_signal_quality(eeg_values):
-                print("Client Module: Discarding low quality EEG data")
+                print(f"Client Module: Discarding low quality EEG data (score: {quality_score:.2f})")
+                EEG_DISCARDED_TOTAL.inc()
                 return None
+
+            # Calculate and record alpha power
+            alpha_power = self._calculate_alpha_power(eeg_values)
+            EEG_ALPHA_POWER.set(alpha_power)
+            
+            # Calculate and record noise level
+            noise_level = self._calculate_noise_level(eeg_values)
+            EEG_NOISE_LEVEL.set(noise_level)
 
             # Add to buffer and maintain size
             self.buffer.extend(eeg_values)
@@ -158,3 +171,16 @@ if __name__ == "__main__":
             print(f"Processed result: {result}\n")
         else:
             print(f"Data processing failed for input: {data}\n")
+
+    def _calculate_alpha_power(self, eeg_values: list) -> float:
+        """Calculate power in alpha frequency band (8-13 Hz)"""
+        if not eeg_values:
+            return 0.0
+        # Simple approximation of alpha power
+        return np.mean(np.abs(eeg_values))
+
+    def _calculate_noise_level(self, eeg_values: list) -> float:
+        """Calculate approximate noise level in the signal"""
+        if not eeg_values:
+            return 0.0
+        return np.std(eeg_values) / np.mean(np.abs(eeg_values)) if np.mean(np.abs(eeg_values)) > 0 else 0.0
