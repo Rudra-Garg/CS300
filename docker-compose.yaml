@@ -307,6 +307,8 @@ services:
     image: grafana/grafana:latest
     volumes:
       - ./config/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./config/grafana-provisioning:/etc/grafana/provisioning:ro  # Add this line
+      - ./config/grafana-dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
     ports:
       - "3000:3000"
