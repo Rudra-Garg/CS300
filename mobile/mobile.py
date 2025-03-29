@@ -8,7 +8,7 @@ from prometheus_client import start_http_server, make_wsgi_app
 from client_module import ClientModule
 from flask import Flask
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
-from metrics import (
+from .metrics import (
     EEG_DATA_PROCESSED, GATEWAY_REQUEST_LATENCY, GATEWAY_REQUEST_FAILURES,
     EEG_QUALITY_SCORE, EEG_DISCARDED_TOTAL, EEG_ALPHA_POWER, EEG_NOISE_LEVEL
 )
