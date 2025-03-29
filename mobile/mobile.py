@@ -21,9 +21,6 @@ app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
     '/metrics': make_wsgi_app()
 })
 
-# Remove the separate metrics server start
-# start_http_server(9090)  # Remove this line
-
 gateway = os.getenv('GATEWAY')
 url = f'http://{gateway}:8000/'
 

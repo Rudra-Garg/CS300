@@ -57,7 +57,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9091:9090"
+      - "9091:8000"  # Changed from 9090 to 8000
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -82,7 +82,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9092:9090"
+      - "9092:8000"  # Changed from 9090 to 8000
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -135,11 +135,21 @@ services:
       - gateway1_mobiles_net
     environment:
       - GATEWAY=gateway1
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
-    volumes:
-      - ./logs/mobile1_2:/app/logs
-      - ./config:/app/config
+    ports:
+      - "9094:9090" 
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mobile1_3:
     build: ./mobile
@@ -147,11 +157,21 @@ services:
       - gateway1_mobiles_net
     environment:
       - GATEWAY=gateway1
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
-    volumes:
-      - ./logs/mobile1_3:/app/logs
-      - ./config:/app/config
+    ports:
+      - "9094:9090" 
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mobile1_4:
     build: ./mobile
@@ -159,11 +179,21 @@ services:
       - gateway1_mobiles_net
     environment:
       - GATEWAY=gateway1
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
-    volumes:
-      - ./logs/mobile1_4:/app/logs
-      - ./config:/app/config
+    ports:
+      - "9096:9090" 
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mobile2_1:
     build: ./mobile
@@ -171,11 +201,21 @@ services:
       - gateway2_mobiles_net
     environment:
       - GATEWAY=gateway2
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
-    volumes:
-      - ./logs/mobile2_1:/app/logs
-      - ./config:/app/config
+    ports:
+      - "9097:9090" 
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mobile2_2:
     build: ./mobile
@@ -183,11 +223,21 @@ services:
       - gateway2_mobiles_net
     environment:
       - GATEWAY=gateway2
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
-    volumes:
-      - ./logs/mobile2_2:/app/logs
-      - ./config:/app/config
+    ports:
+      - "9098:9090" 
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mobile2_3:
     build: ./mobile
@@ -195,11 +245,21 @@ services:
       - gateway2_mobiles_net
     environment:
       - GATEWAY=gateway2
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
-    volumes:
-      - ./logs/mobile2_3:/app/logs
-      - ./config:/app/config
+    ports:
+      - "9099:9090" 
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mobile2_4:
     build: ./mobile
@@ -207,11 +267,21 @@ services:
       - gateway2_mobiles_net
     environment:
       - GATEWAY=gateway2
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     cap_add:
       - NET_ADMIN
-    volumes:
-      - ./logs/mobile2_4:/app/logs
-      - ./config:/app/config
+    ports:
+      - "9100:9090" 
+    depends_on:
+      gateway1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   prometheus:
     image: prom/prometheus:latest
@@ -230,6 +300,8 @@ services:
       - monitoring_net
       - cloud_proxy_net
       - proxy_gateways_net
+      - gateway1_mobiles_net
+      - gateway2_mobiles_net
 
   grafana:
     image: grafana/grafana:latest
@@ -240,6 +312,10 @@ services:
       - "3000:3000"
     networks:
       - monitoring_net
+      - cloud_proxy_net
+      - proxy_gateways_net
+      - gateway1_mobiles_net
+      - gateway2_mobiles_net
     depends_on:
       - prometheus
     environment:

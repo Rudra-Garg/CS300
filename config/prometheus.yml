@@ -16,6 +16,7 @@ scrape_configs:
           - mobile2_4:9090
 
   - job_name: gateway
+    
     static_configs:
       - targets:
           - gateway1:8000
