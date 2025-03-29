@@ -238,7 +238,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     volumes:
-      - ./config/grafana.yml:/etc/grafana/grafana.ini
+      - ./config/grafana.ini:/etc/grafana/grafana.ini:ro
       - grafana_data:/var/lib/grafana
     ports:
       - "3000:3000"
