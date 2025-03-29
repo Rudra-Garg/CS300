@@ -126,9 +126,12 @@ class ClientModule:
             # 2. Calculate signal-to-noise ratio (simplified)
             mean_signal = sum(valid_values) / len(valid_values)
             variance = sum((x - mean_signal) ** 2 for x in valid_values) / len(valid_values)
+            print(f"Calculated variance: {variance}") # DEBUG
             quality_score = 1.0 / (1.0 + variance) if variance > 0 else 1.0
-
-            return min(1.0, max(0.0, quality_score))
+            print(f"Calculated quality score (before clamp): {quality_score}") # DEBUG
+            final_score = min(1.0, max(0.0, quality_score))
+            print(f"Final quality score: {final_score}") # DEBUG
+            return final_score
 
         except Exception as e:
             print(f"Error calculating quality score: {str(e)}")
