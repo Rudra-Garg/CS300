@@ -157,6 +157,18 @@ class ClientModule:
         except Exception as e:
             print(f"Error updating concentration display: {str(e)}")
 
+    def _calculate_alpha_power(self, eeg_values: list) -> float:
+        """Calculate power in alpha frequency band (8-13 Hz)"""
+        if not eeg_values:
+            return 0.0
+        # Simple approximation of alpha power
+        return np.mean(np.abs(eeg_values))
+
+    def _calculate_noise_level(self, eeg_values: list) -> float:
+        """Calculate approximate noise level in the signal"""
+        if not eeg_values:
+            return 0.0
+        return np.std(eeg_values) / np.mean(np.abs(eeg_values)) if np.mean(np.abs(eeg_values)) > 0 else 0.0
 
 # Example usage
 if __name__ == "__main__":
@@ -177,16 +189,4 @@ if __name__ == "__main__":
             print(f"Processed result: {result}\n")
         else:
             print(f"Data processing failed for input: {data}\n")
-
-    def _calculate_alpha_power(self, eeg_values: list) -> float:
-        """Calculate power in alpha frequency band (8-13 Hz)"""
-        if not eeg_values:
-            return 0.0
-        # Simple approximation of alpha power
-        return np.mean(np.abs(eeg_values))
-
-    def _calculate_noise_level(self, eeg_values: list) -> float:
-        """Calculate approximate noise level in the signal"""
-        if not eeg_values:
-            return 0.0
-        return np.std(eeg_values) / np.mean(np.abs(eeg_values)) if np.mean(np.abs(eeg_values)) > 0 else 0.0
+            
