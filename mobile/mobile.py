@@ -11,6 +11,11 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 app = Flask(__name__)
 
+# Add health check endpoint
+@app.route('/health')
+def health_check():
+    return 'healthy', 200
+
 # Prometheus metrics
 EEG_DATA_PROCESSED = Counter('eeg_data_processed_total', 'Total number of EEG data points processed')
 GATEWAY_REQUEST_LATENCY = Gauge('gateway_request_latency_seconds', 'Gateway request latency in seconds')
@@ -113,6 +118,10 @@ gateway_connector = GatewayConnector(url)
 
 if __name__ == '__main__':
     print(f"Mobile client started - connecting to gateway at {url}")
+    
+    # Start Flask server in a separate thread
+    from threading import Thread
+    Thread(target=lambda: app.run(host='0.0.0.0', port=9090, debug=False)).start()
     
     while True:
         try:
