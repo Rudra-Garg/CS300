@@ -15,7 +15,7 @@ class ClientModule:
         self.buffer = []
         self.last_send_time = 0
         self.send_interval = 0.1  # 100ms interval between sends
-        self.error_threshold = 0.5  # 50% threshold for signal quality
+        self.error_threshold = 0.99999  # 50% threshold for signal quality
 
     def process_eeg(self, eeg_data: Union[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Process incoming EEG data and prepare it for transmission.
