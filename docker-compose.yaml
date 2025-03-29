@@ -162,7 +162,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9094:9090" 
+      - "9096:9090" 
     depends_on:
       gateway1:
         condition: service_healthy
@@ -184,7 +184,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9096:9090" 
+      - "9097:9090" 
     depends_on:
       gateway1:
         condition: service_healthy
@@ -206,7 +206,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9097:9090" 
+      - "9098:9090" 
     depends_on:
       gateway2:
         condition: service_healthy
@@ -228,7 +228,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9098:9090" 
+      - "9099:9090" 
     depends_on:
       gateway2:
         condition: service_healthy
@@ -250,7 +250,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9099:9090" 
+      - "9100:9090" 
     depends_on:
       gateway2:
         condition: service_healthy
@@ -272,7 +272,7 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9100:9090" 
+      - "9101:9090" 
     depends_on:
       gateway2:
         condition: service_healthy
