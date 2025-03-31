@@ -34,6 +34,12 @@ services:
         condition: service_healthy
       gateway2:
         condition: service_healthy
+    environment:
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_PROXY_TO_CLOUD=${LATENCY_PROXY_TO_CLOUD:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_PROXY_TO_CLOUD=${JITTER_PROXY_TO_CLOUD:-}
+      - LOSS_PROXY_TO_CLOUD=${LOSS_PROXY_TO_CLOUD:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 10s
@@ -59,6 +65,17 @@ services:
     ports:
       - "9091:8000"  # Changed from 9090 to 8000
 
+    environment:
+      # Pass values directly from .env/host environment
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_GATEWAY_TO_PROXY=${LATENCY_GATEWAY_TO_PROXY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_GATEWAY_TO_PROXY=${JITTER_GATEWAY_TO_PROXY:-}
+      - LOSS_GATEWAY_TO_PROXY=${LOSS_GATEWAY_TO_PROXY:-}
+      # Pass other necessary env vars if any (like PYTHONUNBUFFERED)
+      - PYTHONUNBUFFERED=1
+
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -83,7 +100,15 @@ services:
       - NET_ADMIN
     ports:
       - "9092:8000"  # Changed from 9090 to 8000
-
+    environment:
+      # Pass values directly from .env/host environment
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_GATEWAY_TO_PROXY=${LATENCY_GATEWAY_TO_PROXY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_GATEWAY_TO_PROXY=${JITTER_GATEWAY_TO_PROXY:-}
+      - LOSS_GATEWAY_TO_PROXY=${LOSS_GATEWAY_TO_PROXY:-}
+      # Pass other necessary env vars if any (like PYTHONUNBUFFERED)
+      - PYTHONUNBUFFERED=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -103,10 +128,17 @@ services:
     build: ./mobile
     networks:
       - gateway1_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway1
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:
@@ -133,10 +165,17 @@ services:
     build: ./mobile
     networks:
       - gateway1_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway1
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:
@@ -155,10 +194,17 @@ services:
     build: ./mobile
     networks:
       - gateway1_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway1
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:
@@ -177,10 +223,17 @@ services:
     build: ./mobile
     networks:
       - gateway1_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway1
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:
@@ -199,10 +252,17 @@ services:
     build: ./mobile
     networks:
       - gateway2_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway2
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:
@@ -221,10 +281,17 @@ services:
     build: ./mobile
     networks:
       - gateway2_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway2
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:
@@ -243,10 +310,17 @@ services:
     build: ./mobile
     networks:
       - gateway2_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway2
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:
@@ -265,10 +339,17 @@ services:
     build: ./mobile
     networks:
       - gateway2_mobiles_net
+    # MERGE environment variables
     environment:
-      - GATEWAY=gateway2
+      - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Add the latency variables
+      - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+      - LATENCY_MOBILE_TO_GATEWAY=${LATENCY_MOBILE_TO_GATEWAY:-0ms}
+      # Pass jitter/loss if using them in entrypoint.sh
+      - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
+      - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
     cap_add:
       - NET_ADMIN
     ports:

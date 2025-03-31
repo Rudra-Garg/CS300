@@ -1060,7 +1060,7 @@
   "timepicker": {},
   "timezone": "",
   "title": "Enhanced EEG Fog Simulation Monitoring",
-  "uid": "new-eeg-dashboard",
+  "uid": "dash",
   "version": 2,
   "weekStart": ""
 }

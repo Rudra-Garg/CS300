@@ -1,0 +1,24 @@
+# config/grafana-provisioning/dashboards/main.yaml
+apiVersion: 1
+
+providers:
+  # <string> An identifier for this provider. Required. It must be unique for each provider.
+- name: 'default' # A descriptive name for the provider
+  # <int> Org id. Default is 1
+  orgId: 1
+  # <string> Name of the dashboard folder. Required.
+  folder: '' # Root folder, or specify a name like 'EEG Simulation'
+  # <string> Provider type. Default is file
+  type: file
+  # <bool> Disable / Enable dashboard deletion
+  disableDeletion: false
+  # <bool> Enable dashboard editing
+  editable: true
+  # <map> Options to configure the provider
+  options:
+    # <string> Path to dashboard files on disk. Required.
+    path: /var/lib/grafana/dashboards # This is the path INSIDE the container where you mounted the dashboards
+    # <bool> If set to true, Grafana will update dashboards automatically when the json files change
+    # Does not always work reliably with Docker volume mounts without extra tooling.
+    # Set to false for more predictable behavior on restart.
+    # foldersFromFilesStructure: true # Use if you want subdirs in host path to become Grafana folders

@@ -21,9 +21,11 @@ WORKDIR /app
 COPY mobile.py /app/
 COPY client_module.py /app/
 COPY metrics.py /app/
-
+COPY entrypoint.sh /app/entrypoint.sh 
+RUN chmod +x /app/entrypoint.sh      
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
 # Command to run
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python", "mobile.py"]
