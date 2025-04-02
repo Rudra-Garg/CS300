@@ -20,28 +20,65 @@ services:
     volumes:
       - ./logs/cloud:/var/log/nginx
 
-  proxy:
-    build: ./proxy
+  # proxy:
+  #   build: ./proxy
+  #   networks:
+  #     - cloud_proxy_net
+  #     - proxy_gateways_net
+  #   cap_add:
+  #     - NET_ADMIN
+  #   ports:
+  #     - "9090:9090"
+  #   depends_on:
+  #     gateway1:
+  #       condition: service_healthy
+  #     gateway2:
+  #       condition: service_healthy
+  #   environment:
+  #     - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
+  #     - LATENCY_PROXY_TO_CLOUD=${LATENCY_PROXY_TO_CLOUD:-0ms}
+  #     # Pass jitter/loss if using them in entrypoint.sh
+  #     - JITTER_PROXY_TO_CLOUD=${JITTER_PROXY_TO_CLOUD:-}
+  #     - LOSS_PROXY_TO_CLOUD=${LOSS_PROXY_TO_CLOUD:-}
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 60s
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+  #   volumes:
+  #     - ./logs/proxy:/var/log/nginx
+  #     - ./config:/app/config
+
+  proxy_py: # Renamed service for clarity
+    build:
+      context: .
+      dockerfile: proxy_py/Dockerfile
     networks:
-      - cloud_proxy_net
-      - proxy_gateways_net
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "9090:9090"
+      - cloud_proxy_net    # Connects up to cloud
+      - proxy_gateways_net # Connects down to gateways
     depends_on:
       gateway1:
         condition: service_healthy
       gateway2:
         condition: service_healthy
+    cap_add:
+      - NET_ADMIN 
+    ports:
+      - "8080:8000" # Expose proxy on host port 8080 (internal 8000)
     environment:
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
       - LATENCY_PROXY_TO_CLOUD=${LATENCY_PROXY_TO_CLOUD:-0ms}
-      # Pass jitter/loss if using them in entrypoint.sh
-      - JITTER_PROXY_TO_CLOUD=${JITTER_PROXY_TO_CLOUD:-}
+      - JITTER_PROXY_TO_CLOUD=${JITTER_PROXY_TO_CLOUD:-} # Pass empty if unset in .env
       - LOSS_PROXY_TO_CLOUD=${LOSS_PROXY_TO_CLOUD:-}
+      - PYTHONUNBUFFERED=1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,14 +86,17 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+          max-size: "10m"
+          max-file: "3"
     volumes:
       - ./logs/proxy:/var/log/nginx
       - ./config:/app/config
 
+
   gateway1:
-    build: ./gateway
+    build:
+      context: . 
+      dockerfile: gateway/Dockerfile
     networks:
       - proxy_gateways_net
       - gateway1_mobiles_net
@@ -64,9 +104,13 @@ services:
       - NET_ADMIN
     ports:
       - "9091:8000"  # Changed from 9090 to 8000
-
+    deploy: # <-- ADD THIS SECTION
+      resources:
+        limits:
+          cpus: '0.5' # Limit to 50% of one CPU core
+          memory: 512M # Limit to 512 MB RAM
     environment:
-      # Pass values directly from .env/host environment
+      - PROXY_URL=http://proxy_py:8000/process
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
       - LATENCY_GATEWAY_TO_PROXY=${LATENCY_GATEWAY_TO_PROXY:-0ms}
       # Pass jitter/loss if using them in entrypoint.sh
@@ -74,6 +118,11 @@ services:
       - LOSS_GATEWAY_TO_PROXY=${LOSS_GATEWAY_TO_PROXY:-}
       # Pass other necessary env vars if any (like PYTHONUNBUFFERED)
       - PYTHONUNBUFFERED=1
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - ENABLE_CLOUD_OFFLOAD=${ENABLE_CLOUD_OFFLOAD:-false}
+      - GATEWAY_CPU_LIMIT=${GATEWAY_CPU_LIMIT:-0.5}
+      - GATEWAY_LOAD_THRESHOLD=${GATEWAY_LOAD_THRESHOLD:-0.9}
+      - CLOUD_ENDPOINT=${CLOUD_ENDPOINT:-http://cloud/}
 
 
     healthcheck:
@@ -92,7 +141,9 @@ services:
       - ./config:/app/config
 
   gateway2:
-    build: ./gateway
+    build:
+      context: . 
+      dockerfile: gateway/Dockerfile
     networks:
       - proxy_gateways_net
       - gateway2_mobiles_net
@@ -100,8 +151,13 @@ services:
       - NET_ADMIN
     ports:
       - "9092:8000"  # Changed from 9090 to 8000
+    deploy: # <-- ADD THIS SECTION
+      resources:
+        limits:
+          cpus: '0.5' # Limit to 50% of one CPU core
+          memory: 512M # Limit to 512 MB RAM
     environment:
-      # Pass values directly from .env/host environment
+      - PROXY_URL=http://proxy_py:8000/process
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
       - LATENCY_GATEWAY_TO_PROXY=${LATENCY_GATEWAY_TO_PROXY:-0ms}
       # Pass jitter/loss if using them in entrypoint.sh
@@ -109,6 +165,11 @@ services:
       - LOSS_GATEWAY_TO_PROXY=${LOSS_GATEWAY_TO_PROXY:-}
       # Pass other necessary env vars if any (like PYTHONUNBUFFERED)
       - PYTHONUNBUFFERED=1
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - ENABLE_CLOUD_OFFLOAD=${ENABLE_CLOUD_OFFLOAD:-false}
+      - GATEWAY_CPU_LIMIT=${GATEWAY_CPU_LIMIT:-0.5}
+      - GATEWAY_LOAD_THRESHOLD=${GATEWAY_LOAD_THRESHOLD:-0.9}
+      - CLOUD_ENDPOINT=${CLOUD_ENDPOINT:-http://cloud/}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -125,7 +186,9 @@ services:
       - ./config:/app/config
 
   mobile1_1:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
     # MERGE environment variables
@@ -139,10 +202,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9093:9090"
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
         condition: service_healthy
@@ -162,7 +234,9 @@ services:
       - ./config:/app/config
 
   mobile1_2:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
     # MERGE environment variables
@@ -176,10 +250,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9094:9090" 
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
         condition: service_healthy
@@ -191,7 +274,9 @@ services:
       start_period: 40s
 
   mobile1_3:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
     # MERGE environment variables
@@ -205,10 +290,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9096:9090" 
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
         condition: service_healthy
@@ -220,7 +314,9 @@ services:
       start_period: 40s
 
   mobile1_4:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
     # MERGE environment variables
@@ -234,10 +330,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9097:9090" 
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
         condition: service_healthy
@@ -249,12 +354,14 @@ services:
       start_period: 40s
 
   mobile2_1:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
     # MERGE environment variables
     environment:
-      - GATEWAY=gateway1 # Keep existing ones
+      - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       # Add the latency variables
@@ -263,10 +370,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9098:9090" 
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
         condition: service_healthy
@@ -278,12 +394,14 @@ services:
       start_period: 40s
 
   mobile2_2:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
     # MERGE environment variables
     environment:
-      - GATEWAY=gateway1 # Keep existing ones
+      - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       # Add the latency variables
@@ -292,10 +410,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9099:9090" 
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
         condition: service_healthy
@@ -307,12 +434,14 @@ services:
       start_period: 40s
 
   mobile2_3:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
     # MERGE environment variables
     environment:
-      - GATEWAY=gateway1 # Keep existing ones
+      - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       # Add the latency variables
@@ -321,10 +450,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9100:9090" 
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
         condition: service_healthy
@@ -336,12 +474,14 @@ services:
       start_period: 40s
 
   mobile2_4:
-    build: ./mobile
+    build:
+      context: . 
+      dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
     # MERGE environment variables
     environment:
-      - GATEWAY=gateway1 # Keep existing ones
+      - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       # Add the latency variables
@@ -350,10 +490,19 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
+      # Add the placement strategy and load threshold variables
+      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
     cap_add:
       - NET_ADMIN
     ports:
       - "9101:9090" 
+    deploy: # <-- ADD THIS SECTION (Optional)
+      resources:
+        limits:
+          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
         condition: service_healthy

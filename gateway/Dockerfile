@@ -9,19 +9,19 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
 WORKDIR /app
-COPY gateway.py /app/
-COPY concentration_calculator_module.py /app/
-COPY entrypoint.sh /app/entrypoint.sh 
-RUN chmod +x /app/entrypoint.sh      
 
+COPY gateway/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY gateway/gateway.py ./
+COPY gateway/entrypoint.sh ./
+COPY shared_modules ./shared_modules 
+
+RUN chmod +x ./entrypoint.sh
 
 HEALTHCHECK --interval=30s --timeout=3s \
     CMD curl -f http://localhost:8000/health || exit 1
 
-ENV PYTHONUNBUFFERED=1
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["python", "gateway.py"]

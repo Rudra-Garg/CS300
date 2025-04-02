@@ -22,3 +22,9 @@ scrape_configs:
       - targets:
           - gateway1:8000
           - gateway2:8000
+  
+  - job_name: proxy
+    metrics_path: /metrics    # Add this line
+    static_configs:
+      - targets:
+          - proxy_py:8000

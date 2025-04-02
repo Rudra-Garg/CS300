@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 3,
   "links": [],
   "liveNow": true,
   "panels": [
@@ -30,9 +30,9 @@
         "x": 0,
         "y": 0
       },
-      "id": 20,
+      "id": 100,
       "panels": [],
-      "title": "Overview",
+      "title": "Simulation Overview",
       "type": "row"
     },
     {
@@ -72,13 +72,12 @@
         "x": 0,
         "y": 1
       },
-      "id": 2,
+      "id": 101,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "mean"
@@ -86,7 +85,6 @@
           "fields": "",
           "values": false
         },
-        "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
       },
@@ -100,12 +98,75 @@
           "editorMode": "code",
           "expr": "avg(gateway_request_latency_seconds{job=\"mobile\"})",
           "instant": false,
-          "legendFormat": "Avg Mobile RTT Latency",
+          "legendFormat": "Avg Mobile RTT to Gateway",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Avg Mobile Round-Trip Latency",
+      "title": "Avg Mobile -> Gateway Latency (RTT)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "id": 102,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(eeg_data_processed_total{job=\"mobile\"}[1m]))",
+          "instant": true,
+          "legendFormat": "Total EEG Data Input Rate",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Total System Input Rate (EEG)",
       "type": "stat"
     },
     {
@@ -142,81 +203,15 @@
       "gridPos": {
         "h": 6,
         "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "id": 22,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gateway_errors_total{job=\"gateway\"}[5m])) / sum(rate(gateway_requests_total{job=\"gateway\"}[5m]))",
-          "instant": true,
-          "legendFormat": "Gateway Error Rate",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Gateway Error Rate (%)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
         "x": 16,
         "y": 1
       },
-      "id": 21,
+      "id": 103,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -224,7 +219,6 @@
           "fields": "",
           "values": false
         },
-        "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
       },
@@ -236,14 +230,14 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(rate(gateway_requests_total{job=\"gateway\"}[1m]))",
+          "expr": "(sum(rate(gateway_request_failures_total{job=\"mobile\"}[5m])) + sum(rate(gateway_errors_total{job=\"gateway\"}[5m])) + sum(rate(gateway_forward_to_proxy_failures_total{job=\"gateway\"}[5m])) + sum(rate(proxy_errors_total{job=\"proxy\"}[5m]))) / sum(rate(eeg_data_processed_total{job=\"mobile\"}[5m]))",
           "instant": true,
-          "legendFormat": "Total Gateway Requests",
+          "legendFormat": "Overall System Error Rate",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Total Gateway Request Rate",
+      "title": "Overall System Error Rate (%)",
       "type": "stat"
     },
     {
@@ -253,220 +247,6 @@
         "w": 24,
         "x": 0,
         "y": 7
-      },
-      "id": 10,
-      "panels": [],
-      "title": "Gateway Performance",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 15,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 8
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gateway_requests_total{job=\"gateway\"}[1m])) by (instance)",
-          "instant": false,
-          "legendFormat": "Gateway {{instance}} Rate",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Gateway Request Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "right",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "id": 12,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(gateway_request_duration_seconds_bucket{job=\"gateway\"}[5m])) by (le, instance))",
-          "instant": false,
-          "legendFormat": "Gateway {{instance}} p95 Latency",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(gateway_request_duration_seconds_sum{job=\"gateway\"}[5m])) by (instance) / sum(rate(gateway_request_duration_seconds_count{job=\"gateway\"}[5m])) by (instance)",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "Gateway {{instance}} Avg Latency",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Gateway Processing Latency",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 16
       },
       "id": 13,
       "panels": [],
@@ -483,83 +263,30 @@
           "color": {
             "mode": "palette-classic"
           },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 15,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
+          "custom": {"lineWidth": 1, "fillOpacity": 15, "stacking": {"mode": "none"},"drawStyle": "line","lineInterpolation": "smooth"},
           "unit": "ops"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
-        "y": 17
+        "y": 8
       },
       "id": 14,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
       },
       "pluginVersion": "11.6.0",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
           "editorMode": "code",
           "expr": "sum(rate(eeg_data_processed_total{job=\"mobile\"}[1m])) by (instance)",
           "instant": false,
-          "legendFormat": "Mobile {{instance}} Processed",
+          "legendFormat": "{{instance}} Processed",
           "range": true,
           "refId": "A"
         }
@@ -568,92 +295,34 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "right",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 10, "stacking": {"mode": "none"}, "axisPlacement": "right","drawStyle": "line","lineInterpolation": "linear"},
           "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 17
+        "w": 8,
+        "x": 8,
+        "y": 8
       },
       "id": 15,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
       },
       "pluginVersion": "11.6.0",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
           "editorMode": "code",
           "expr": "gateway_request_latency_seconds{job=\"mobile\"}",
           "instant": false,
-          "legendFormat": "Mobile {{instance}} Latency",
+          "legendFormat": "{{instance}} Latency",
           "range": true,
           "refId": "A"
         }
@@ -662,191 +331,348 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
-          "unit": "ops"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 25
-      },
-      "id": 18,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(eeg_discarded_total{job=\"mobile\"}[1m])) by (instance)",
-          "instant": false,
-          "legendFormat": "Mobile {{instance}} Discard Rate",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Mobile Data Discard Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 80, "stacking": {"mode": "normal"}, "drawStyle": "bars"},
           "unit": "errs"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 25
+        "w": 8,
+        "x": 16,
+        "y": 8
       },
       "id": 19,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
       },
       "pluginVersion": "11.6.0",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
           "editorMode": "code",
           "expr": "sum(rate(gateway_request_failures_total{job=\"mobile\"}[1m])) by (instance)",
           "instant": false,
-          "legendFormat": "Mobile {{instance}} GW Failure Rate",
+          "legendFormat": "{{instance}} GW Failure Rate",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Mobile Gateway Request Failure Rate",
+      "type": "timeseries"
+    },
+        {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 10,
+      "panels": [],
+      "title": "Gateway Performance",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 15, "stacking": {"mode": "none"},"drawStyle": "line","lineInterpolation": "smooth"},
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 17
+      },
+      "id": 11,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "sum(rate(gateway_requests_total{job=\"gateway\"}[1m])) by (instance)",
+          "instant": false,
+          "legendFormat": "{{instance}} RX Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Gateway Request RX Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 10, "stacking": {"mode": "none"}, "axisPlacement": "right","drawStyle": "line","lineInterpolation": "linear"},
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 17
+      },
+      "id": 12,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(gateway_request_duration_seconds_bucket{job=\"gateway\"}[5m])) by (le, instance))",
+          "instant": false,
+          "legendFormat": "{{instance}} p95",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "sum(rate(gateway_request_duration_seconds_sum{job=\"gateway\"}[5m])) by (instance) / sum(rate(gateway_request_duration_seconds_count{job=\"gateway\"}[5m])) by (instance)",
+          "instant": false,
+          "legendFormat": "{{instance}} Avg",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Gateway Calculator Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 10, "stacking": {"mode": "none"},"drawStyle": "line","lineInterpolation": "linear"},
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 17
+      },
+      "id": 112,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(gateway_forward_to_proxy_latency_seconds_bucket{job=\"gateway\"}[5m])) by (le, instance))",
+          "instant": false,
+          "legendFormat": "{{instance}} p95",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "sum(rate(gateway_forward_to_proxy_latency_seconds_sum{job=\"gateway\"}[5m])) by (instance) / sum(rate(gateway_forward_to_proxy_latency_seconds_count{job=\"gateway\"}[5m])) by (instance)",
+          "instant": false,
+          "legendFormat": "{{instance}} Avg",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Gateway -> Proxy Forward Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 80, "stacking": {"mode": "normal"},"drawStyle": "bars"},
+          "unit": "errs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 17
+      },
+      "id": 113,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "sum(rate(gateway_errors_total{job=\"gateway\"}[1m])) by (instance)",
+          "instant": false,
+          "legendFormat": "{{instance}} Calc Errors",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "sum(rate(gateway_forward_to_proxy_failures_total{job=\"gateway\"}[1m])) by (instance)",
+          "instant": false,
+          "legendFormat": "{{instance}} Fwd Failures",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Gateway Error / Failure Rate",
+      "type": "timeseries"
+    },
+     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 200,
+      "panels": [],
+      "title": "Proxy Performance",
+      "type": "row"
+    },
+        {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 15, "stacking": {"mode": "none"},"drawStyle": "line","lineInterpolation": "smooth"},
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 26
+      },
+      "id": 201,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "rate(proxy_requests_total{job=\"proxy\"}[1m])",
+          "instant": false,
+          "legendFormat": "Proxy RX Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Proxy Request RX Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 10, "stacking": {"mode": "none"}, "axisPlacement": "right","drawStyle": "line","lineInterpolation": "linear"},
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 26
+      },
+      "id": 202,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(proxy_connector_latency_seconds_bucket{job=\"proxy\"}[5m])) by (le))",
+          "instant": false,
+          "legendFormat": "Proxy p95 Latency",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "sum(rate(proxy_connector_latency_seconds_sum{job=\"proxy\"}[5m])) / sum(rate(proxy_connector_latency_seconds_count{job=\"proxy\"}[5m]))",
+          "instant": false,
+          "legendFormat": "Proxy Avg Latency",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Proxy Connector Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 80, "stacking": {"mode": "normal"},"drawStyle": "bars"},
+          "unit": "errs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 26
+      },
+      "id": 203,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "rate(proxy_errors_total{job=\"proxy\"}[1m])",
+          "instant": false,
+          "legendFormat": "Proxy Error Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Proxy Processing Error Rate",
       "type": "timeseries"
     },
     {
@@ -855,7 +681,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 34 
       },
       "id": 16,
       "panels": [],
@@ -863,66 +689,17 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 10, "stacking": {"mode": "none"},"drawStyle": "line","lineInterpolation": "linear"},
           "mappings": [],
           "max": 1,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "red"
-              },
-              {
-                "color": "#EAB839",
-                "value": 0.5
-              },
-              {
-                "color": "green",
-                "value": 0.8
-              }
-            ]
+            "steps": [{"color": "red"}, {"color": "#EAB839", "value": 0.5}, {"color": "green", "value": 0.8}]
           },
           "unit": "short"
         },
@@ -930,38 +707,23 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 6,
         "x": 0,
-        "y": 34
+        "y": 35 
       },
       "id": 17,
       "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
+        "legend": {"calcs": ["mean","lastNotNull"],"displayMode": "table","placement": "right","showLegend": true},
+        "tooltip": {"mode": "multi"}
       },
       "pluginVersion": "11.6.0",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
           "editorMode": "code",
           "expr": "eeg_quality_score{job=\"mobile\"}",
           "instant": false,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{instance}} Quality",
           "range": true,
           "refId": "A"
         }
@@ -969,58 +731,48 @@
       "title": "EEG Signal Quality Score",
       "type": "timeseries"
     },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
+     {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          },
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 80, "stacking": {"mode": "normal"},"drawStyle": "bars"},
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 35
+      },
+      "id": 18,
+      "options": {
+        "legend": {"displayMode": "list","placement": "bottom","showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+          "editorMode": "code",
+          "expr": "sum(rate(eeg_discarded_total{job=\"mobile\"}[1m])) by (instance)",
+          "instant": false,
+          "legendFormat": "{{instance}} Discard Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Mobile Data Discard Rate (Quality)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"lineWidth": 1, "fillOpacity": 10, "stacking": {"mode": "none"},"drawStyle": "line","lineInterpolation": "linear"},
           "unit": ""
         },
         "overrides": []
@@ -1029,32 +781,17 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 34
+        "y": 35
       },
       "id": 23,
       "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
+        "legend": {"calcs": ["mean","lastNotNull"],"displayMode": "table","placement": "right","showLegend": true},
+        "tooltip": {"mode": "multi"}
       },
       "pluginVersion": "11.6.0",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
           "editorMode": "code",
           "expr": "eeg_alpha_power{job=\"mobile\"}",
           "instant": false,
@@ -1063,10 +800,7 @@
           "refId": "A"
         },
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
+          "datasource": {"type": "prometheus","uid": "PBFA97CFB590B2093"},
           "editorMode": "code",
           "expr": "eeg_noise_level{job=\"mobile\"}",
           "instant": false,
@@ -1079,25 +813,19 @@
       "type": "timeseries"
     }
   ],
-  "preload": false,
-  "refresh": "auto",
-  "schemaVersion": 41,
-  "tags": [
-    "eeg",
-    "fog",
-    "edge",
-    "simulation"
-  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["eeg", "fog", "edge", "simulation", "proxy"],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Enhanced EEG Fog Simulation Monitoring",
+  "title": "EEG Fog Simulation Monitoring V2 (with Proxy)",
   "uid": "dash",
-  "version": 4
+  "version": 2
 }

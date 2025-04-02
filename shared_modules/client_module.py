@@ -2,9 +2,7 @@ import json
 import time
 import numpy as np
 from typing import Dict, Any, Union, Optional
-from metrics import (
-    EEG_QUALITY_SCORE, EEG_DISCARDED_TOTAL, EEG_ALPHA_POWER, EEG_NOISE_LEVEL
-)
+from .metrics import *
 
 
 class ClientModule:

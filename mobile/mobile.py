@@ -5,13 +5,10 @@ import json
 import random
 import numpy as np
 from prometheus_client import start_http_server, make_wsgi_app
-from client_module import ClientModule
+from shared_modules.client_module import ClientModule
 from flask import Flask
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
-from metrics import (
-    EEG_DATA_PROCESSED, GATEWAY_REQUEST_LATENCY, GATEWAY_REQUEST_FAILURES,
-    EEG_QUALITY_SCORE, EEG_DISCARDED_TOTAL, EEG_ALPHA_POWER, EEG_NOISE_LEVEL
-)
+from shared_modules.metrics import *
 
 app = Flask(__name__)
 
@@ -26,8 +23,13 @@ app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
     '/metrics': make_wsgi_app()
 })
 
-gateway = os.getenv('GATEWAY')
-url = f'http://{gateway}:8000/'
+# --- Configuration ---
+gateway_name = os.getenv('GATEWAY')
+gateway_url = f'http://{gateway_name}:8000/' if gateway_name else None
+print(f"--- Mobile Configuration ---")
+print(f"Gateway URL: {gateway_url}")
+print(f"--------------------------")
+# ---
 
 class SensorSimulator:
     """Simulate EEG Sensor with realistic data generation"""
@@ -82,20 +84,24 @@ class GatewayConnector:
             return None
 
         for attempt in range(self.max_retries):
+            start_time_gw = time.time()
             try:
                 response = self.session.post(self.gateway_url, 
                                            json={"eeg_data": data},
                                            timeout=(5, 10))  # (connect, read) timeouts
                 
                 response.raise_for_status()
-                result = response.json()
-                
-                if 'error' in result:
-                    print(f"Gateway error: {result['error']['message']}")
-                    return None
-                    
-                return result
-                
+                request_time = time.time() - start_time_gw
+                GATEWAY_REQUEST_LATENCY.set(request_time)
+
+                try:
+                    ack_data = response.json()
+                    print(f"Received ACK from Gateway: {ack_data}. RTT: {request_time:.3f}s")
+                    return ack_data # Return the ACK/status
+                except json.JSONDecodeError:
+                    print(f"Received non-JSON ACK from Gateway (Status: {response.status_code}). RTT: {request_time:.3f}s")
+                    return {"status_code": response.status_code} # Return status code
+
             except requests.exceptions.RequestException as e:
                 print(f"Attempt {attempt + 1}/{self.max_retries} failed: {str(e)}")
                 GATEWAY_REQUEST_FAILURES.inc()
@@ -112,16 +118,17 @@ class GatewayConnector:
         return None
 
 # Initialize components
-sensor = SensorSimulator(transmission_time=5, sampling_rate=250)
-client_module = ClientModule()
-gateway_connector = GatewayConnector(url)
+sensor = SensorSimulator(transmission_time=0.1, sampling_rate=250)
+client_module = ClientModule() 
+gateway_connector = GatewayConnector(gateway_url)
 
 if __name__ == '__main__':
-    print(f"Mobile client started - connecting to gateway at {url}")
+    print(f"Mobile client started - connecting to gateway at {gateway_url}")
     
-    # Start Flask server in a separate thread
+    # Start Flask server
     from threading import Thread
-    Thread(target=lambda: app.run(host='0.0.0.0', port=9090, debug=False)).start()
+    flask_thread = Thread(target=lambda: app.run(host='0.0.0.0', port=9090, debug=False, use_reloader=False), daemon=True)
+    flask_thread.start()
     
     while True:
         try:
@@ -129,22 +136,22 @@ if __name__ == '__main__':
             raw_eeg_data = sensor.generate_eeg_data()
             if raw_eeg_data:
                 # Process data through client module
-                start_time = time.time()
                 processed_data = client_module.process_eeg(raw_eeg_data)
                 if processed_data:
                     EEG_DATA_PROCESSED.inc()
                     # Send to gateway and handle response
                     response = gateway_connector.send_data(processed_data)
                     if response:
-                        request_time = time.time() - start_time
-                        GATEWAY_REQUEST_LATENCY.set(request_time)
                         client_module.update_concentration_display(response)
             
-            time.sleep(0.1)  # Prevent CPU overload
             
         except KeyboardInterrupt:
             print("\nShutting down mobile client...")
             break
         except Exception as e:
-            print(f"Error in main loop: {str(e)}")
-            time.sleep(1)  # Delay before retry
+            print(f"FATAL Error in main loop: {type(e).__name__} - {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            time.sleep(5)
+        
+        time.sleep(0.05)
