@@ -74,7 +74,7 @@ services:
     deploy: 
       resources:
         limits:
-          cpus: '0.2' # Limit proxy to 20% of one CPU core
+          cpus: '0.1' # Limit proxy to 20% of one CPU core
           memory: 512M # Limit proxy to 512 MB RAM
     environment:
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
@@ -112,7 +112,7 @@ services:
     deploy: 
       resources:
         limits:
-          cpus: '0.2' # Limit to 20% of one CPU core
+          cpus: '0.1' # Limit to 20% of one CPU core
           memory: 512M # Limit to 512 MB RAM
     environment:
       - PROXY_URL=http://proxy_py:8000/process
@@ -159,7 +159,7 @@ services:
     deploy: # <-- ADD THIS SECTION
       resources:
         limits:
-          cpus: '0.2' # Limit to 20% of one CPU core
+          cpus: '0.1' # Limit to 20% of one CPU core
           memory: 512M # Limit to 512 MB RAM
     environment:
       - PROXY_URL=http://proxy_py:8000/process
@@ -218,7 +218,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -266,7 +266,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -306,7 +306,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -346,7 +346,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -386,7 +386,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
@@ -426,7 +426,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
@@ -466,7 +466,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
@@ -506,7 +506,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.1' # Example: Limit mobile to 20% of a core
+          cpus: '0.05' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:

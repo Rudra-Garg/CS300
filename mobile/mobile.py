@@ -1,5 +1,6 @@
 import math
 import os
+import threading
 import time
 import requests
 import json
@@ -18,6 +19,30 @@ app = Flask(__name__)
 
 CPU_UTILIZATION = Gauge('cpu_utilization_percent', 'Current CPU utilization percentage', ['container_name'])
 container_name = socket.gethostname()
+
+# --- CPU Monitoring Thread ---
+def collect_cpu_metrics():
+    while True:
+        cpu_info = get_container_cpu_percent_non_blocking()
+        if cpu_info:
+            normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
+            if not math.isnan(normalized_cpu):
+                CPU_UTILIZATION.labels(container_name=container_name).set(normalized_cpu)
+                # print(f"DEBUG CPU Norm: {normalized_cpu:.1f}%")
+            else:
+                CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
+        else:
+            CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
+        
+        # Sleep for a short interval before next collection
+        time.sleep(1)  # Update every 1 seconds
+
+def start_cpu_monitoring():
+    cpu_thread = threading.Thread(target=collect_cpu_metrics, daemon=True)
+    cpu_thread.start()
+    print("Background CPU monitoring started")
+# ---
+
 
 # Add health check endpoint
 @app.route('/health')
@@ -133,6 +158,8 @@ gateway_connector = GatewayConnector(gateway_url)
 if __name__ == '__main__':
     print(f"Mobile client started - connecting to gateway at {gateway_url}")
     
+    start_cpu_monitoring()
+    
     # Start Flask server
     from threading import Thread
     flask_thread = Thread(target=lambda: app.run(host='0.0.0.0', port=9090, debug=False, use_reloader=False), daemon=True)
@@ -140,22 +167,7 @@ if __name__ == '__main__':
     
     while True:
         try:
-            # --- CPU Monitoring ---
-            cpu_info = get_container_cpu_percent_non_blocking()
-            current_normalized_cpu = 0.0
-            if cpu_info:
-                normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
-                raw_cpu = cpu_info.get('cpu_percent_raw', 0.0)
-                if not math.isnan(normalized_cpu):
-                    current_normalized_cpu = normalized_cpu
-                    CPU_UTILIZATION.labels(container_name=container_name).set(current_normalized_cpu)
-                    # Optional: Reduce debug frequency if too verbose
-                    # print(f"DEBUG Mobile CPU Norm: {current_normalized_cpu:.1f}% (Raw: {raw_cpu:.1f}%)")
-                else:
-                    CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
-            else:
-                CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
-            # --- End CPU Monitoring ---
+            
             # Generate and process EEG data
             raw_eeg_data = sensor.generate_eeg_data()
             if raw_eeg_data:

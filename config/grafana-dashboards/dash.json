@@ -512,7 +512,7 @@
           "editorMode": "code",
           "expr": "cpu_utilization_percent{job=\"mobile\"}>0",
           "instant": false,
-          "legendFormat": "{{container_name}} CPU %",
+          "legendFormat": "{{instance}} CPU %",
           "range": true,
           "refId": "A"
         }
@@ -858,7 +858,7 @@
           "editorMode": "code",
           "expr": "cpu_utilization_percent{job=\"gateway\"}>0",
           "instant": false,
-          "legendFormat": "{{container_name}} CPU %",
+          "legendFormat": "{{instance}} CPU %",
           "range": true,
           "refId": "A"
         }
@@ -1143,7 +1143,7 @@
           "editorMode": "code",
           "expr": "cpu_utilization_percent{job=\"proxy\"}>0",
           "instant": false,
-          "legendFormat": "{{container_name}} CPU %",
+          "legendFormat": "{{instance}} CPU %",
           "range": true,
           "refId": "A"
         }

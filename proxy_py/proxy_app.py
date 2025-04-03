@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 import json
 import traceback
@@ -33,6 +34,30 @@ connector_module = ConnectorModule()
 app.wsgi_app = DispatcherMiddleware(app.wsgi_app, { '/metrics': make_wsgi_app() })
 # ---
 
+# --- CPU Monitoring Thread ---
+def collect_cpu_metrics():
+    while True:
+        cpu_info = get_container_cpu_percent_non_blocking()
+        if cpu_info:
+            normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
+            if not math.isnan(normalized_cpu):
+                CPU_UTILIZATION.labels(container_name=container_name).set(normalized_cpu)
+                # print(f"DEBUG CPU Norm: {normalized_cpu:.1f}%")
+            else:
+                CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
+        else:
+            CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
+        
+        # Sleep for a short interval before next collection
+        time.sleep(1)  # Update every 1 seconds
+
+def start_cpu_monitoring():
+    cpu_thread = threading.Thread(target=collect_cpu_metrics, daemon=True)
+    cpu_thread.start()
+    print("Background CPU monitoring started")
+# ---
+
+
 # Add health check endpoint
 @app.route('/health')
 def health_check():
@@ -41,18 +66,6 @@ def health_check():
 # This endpoint receives the *result* from the gateway's calculator
 @app.route('/process', methods=['POST'])
 def process_calculator_result():
-    # --- CPU Monitoring ---
-    cpu_info = get_container_cpu_percent_non_blocking()
-    if cpu_info:
-        normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
-        if not math.isnan(normalized_cpu):
-            CPU_UTILIZATION.labels(container_name=container_name).set(normalized_cpu)
-            # print(f"DEBUG Gateway CPU Norm: {normalized_cpu:.1f}%")
-        else:
-            CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
-    else:
-        CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
-    # --- End CPU Monitoring ---
     
     PROXY_REQUEST_COUNT.inc()
     connector_start_time = time.time()
@@ -98,7 +111,8 @@ def process_calculator_result():
 
 if __name__ == '__main__':
     print("Python Proxy Service (with Connector) Starting...")
-    # Start Prometheus metrics server if not using Flask middleware, or rely on /metrics
-    # start_http_server(9091) # Example if needed separately
+    
+    start_cpu_monitoring()  # Start CPU monitoring in the background
+    
     app.run(host='0.0.0.0', port=8000) # Proxy listens on 8000 internally
     

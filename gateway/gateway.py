@@ -1,5 +1,6 @@
 import math
 import os
+import threading
 import time
 import requests
 import json
@@ -22,6 +23,29 @@ FORWARD_TO_PROXY_FAILURES = Counter('gateway_forward_to_proxy_failures_total', '
 ERROR_COUNT = Counter('gateway_errors_total', 'Total number of processing errors')
 CPU_UTILIZATION = Gauge('cpu_utilization_percent', 'Current CPU utilization percentage', ['container_name'])
 container_name = socket.gethostname()
+
+# --- CPU Monitoring Thread ---
+def collect_cpu_metrics():
+    while True:
+        cpu_info = get_container_cpu_percent_non_blocking()
+        if cpu_info:
+            normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
+            if not math.isnan(normalized_cpu):
+                CPU_UTILIZATION.labels(container_name=container_name).set(normalized_cpu)
+                # print(f"DEBUG CPU Norm: {normalized_cpu:.1f}%")
+            else:
+                CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
+        else:
+            CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
+        
+        # Sleep for a short interval before next collection
+        time.sleep(1)  # Update every 1 seconds
+
+def start_cpu_monitoring():
+    cpu_thread = threading.Thread(target=collect_cpu_metrics, daemon=True)
+    cpu_thread.start()
+    print("Background CPU monitoring started")
+# ---
 
 
 app = Flask(__name__)
@@ -48,19 +72,6 @@ def health_check():
 @app.route('/', methods=['POST'])
 def process_and_forward():
     
-    # --- CPU Monitoring ---
-    cpu_info = get_container_cpu_percent_non_blocking()
-    if cpu_info:
-        normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
-        if not math.isnan(normalized_cpu):
-            CPU_UTILIZATION.labels(container_name=container_name).set(normalized_cpu)
-            # print(f"DEBUG Gateway CPU Norm: {normalized_cpu:.1f}%")
-        else:
-            CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
-    else:
-        CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
-    # --- End CPU Monitoring ---
-    
     REQUEST_COUNT.inc()
     calc_start_time = time.time()
     calc_result = None
@@ -68,7 +79,7 @@ def process_and_forward():
 
     try:
         if not request.is_json: # ... (validation) ...
-             ERROR_COUNT.inc(); return jsonify({"error": "Request must be JSON"}), 415
+            ERROR_COUNT.inc(); return jsonify({"error": "Request must be JSON"}), 415
         client_output_data = request.get_json().get("eeg_data")
         if not client_output_data: # ... (validation) ...
             ERROR_COUNT.inc(); return jsonify({"error": "Missing 'eeg_data'"}), 400
@@ -110,9 +121,9 @@ def process_and_forward():
                 print(f"ERROR: Failed to forward to Proxy: {type(e).__name__} - {e}")
                 # Log the error but still return 202 to mobile, indicating forward failure
             except Exception as e_inner:
-                 FORWARD_TO_PROXY_FAILURES.inc()
-                 forward_status = "failed_unexpected"
-                 print(f"ERROR: Unexpected error during proxy forward: {type(e_inner).__name__} - {e_inner}")
+                FORWARD_TO_PROXY_FAILURES.inc()
+                forward_status = "failed_unexpected"
+                print(f"ERROR: Unexpected error during proxy forward: {type(e_inner).__name__} - {e_inner}")
 
         else:
             print("WARN: PROXY_URL not set, cannot forward result.")
@@ -133,4 +144,7 @@ def process_and_forward():
         return jsonify({"error": "Internal server error on gateway"}), 500
 
 if __name__ == '__main__':
+    
+    start_cpu_monitoring()  # Start CPU monitoring in the background
+    
     app.run(host='0.0.0.0', port=8000)
