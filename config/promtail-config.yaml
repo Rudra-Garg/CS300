@@ -1,0 +1,42 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions/positions.yaml # Path inside Promtail container
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push # Tells Promtail where Loki is
+
+scrape_configs:
+  - job_name: system # Scrapes systemd journal if needed (optional, comment out if not needed/available)
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'
+
+  - job_name: containers # Primary job: Scrapes Docker container logs
+    docker_sd_configs: # Uses Docker service discovery via the mounted socket
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        # Optional: Filter containers to scrape if needed
+        # filters:
+        #   - name: label
+        #     values: ["logging=promtail"] # Only scrape containers with this label
+    relabel_configs: # Extracts useful labels from Docker metadata
+      # Example: Use the compose service name as the 'job' label
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'job'
+      # Example: Use container name as 'instance' label
+      - source_labels: ['__meta_docker_container_name__']
+        regex: '/(.*)' # Extract name without leading /
+        target_label: 'instance'
+      # Keep container ID
+      - source_labels: ['__meta_docker_container_id__']
+        target_label: 'container_id'
+      # Keep log stream type (stdout/stderr)
+      - source_labels: ['__meta_docker_container_log_stream__']
+        target_label: 'logstream'

@@ -1,16 +1,23 @@
+import math
 import os
 import time
 import requests
 import json
 import random
+import psutil
+import socket
 import numpy as np
-from prometheus_client import start_http_server, make_wsgi_app
+from prometheus_client import start_http_server, make_wsgi_app, Gauge
 from shared_modules.client_module import ClientModule
+from shared_modules.cpu_monitor import get_container_cpu_percent_non_blocking
 from flask import Flask
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from shared_modules.metrics import *
 
 app = Flask(__name__)
+
+CPU_UTILIZATION = Gauge('cpu_utilization_percent', 'Current CPU utilization percentage', ['container_name'])
+container_name = socket.gethostname()
 
 # Add health check endpoint
 @app.route('/health')
@@ -122,6 +129,7 @@ sensor = SensorSimulator(transmission_time=0.1, sampling_rate=250)
 client_module = ClientModule() 
 gateway_connector = GatewayConnector(gateway_url)
 
+
 if __name__ == '__main__':
     print(f"Mobile client started - connecting to gateway at {gateway_url}")
     
@@ -132,6 +140,22 @@ if __name__ == '__main__':
     
     while True:
         try:
+            # --- CPU Monitoring ---
+            cpu_info = get_container_cpu_percent_non_blocking()
+            current_normalized_cpu = 0.0
+            if cpu_info:
+                normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
+                raw_cpu = cpu_info.get('cpu_percent_raw', 0.0)
+                if not math.isnan(normalized_cpu):
+                    current_normalized_cpu = normalized_cpu
+                    CPU_UTILIZATION.labels(container_name=container_name).set(current_normalized_cpu)
+                    # Optional: Reduce debug frequency if too verbose
+                    # print(f"DEBUG Mobile CPU Norm: {current_normalized_cpu:.1f}% (Raw: {raw_cpu:.1f}%)")
+                else:
+                    CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
+            else:
+                CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
+            # --- End CPU Monitoring ---
             # Generate and process EEG data
             raw_eeg_data = sensor.generate_eeg_data()
             if raw_eeg_data:

@@ -71,6 +71,11 @@ services:
       - NET_ADMIN 
     ports:
       - "8080:8000" # Expose proxy on host port 8080 (internal 8000)
+    deploy: 
+      resources:
+        limits:
+          cpus: '0.2' # Limit proxy to 20% of one CPU core
+          memory: 512M # Limit proxy to 512 MB RAM
     environment:
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
       - LATENCY_PROXY_TO_CLOUD=${LATENCY_PROXY_TO_CLOUD:-0ms}
@@ -89,7 +94,7 @@ services:
           max-size: "10m"
           max-file: "3"
     volumes:
-      - ./logs/proxy:/var/log/nginx
+      - ./logs/proxy:/app/logs
       - ./config:/app/config
 
 
@@ -103,11 +108,11 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9091:8000"  # Changed from 9090 to 8000
-    deploy: # <-- ADD THIS SECTION
+      - "9091:8000" 
+    deploy: 
       resources:
         limits:
-          cpus: '0.5' # Limit to 50% of one CPU core
+          cpus: '0.2' # Limit to 20% of one CPU core
           memory: 512M # Limit to 512 MB RAM
     environment:
       - PROXY_URL=http://proxy_py:8000/process
@@ -154,7 +159,7 @@ services:
     deploy: # <-- ADD THIS SECTION
       resources:
         limits:
-          cpus: '0.5' # Limit to 50% of one CPU core
+          cpus: '0.2' # Limit to 20% of one CPU core
           memory: 512M # Limit to 512 MB RAM
     environment:
       - PROXY_URL=http://proxy_py:8000/process
@@ -213,7 +218,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -261,7 +266,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -301,7 +306,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -341,7 +346,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway1:
@@ -381,7 +386,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
@@ -421,7 +426,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
@@ -461,7 +466,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
@@ -501,7 +506,7 @@ services:
     deploy: # <-- ADD THIS SECTION (Optional)
       resources:
         limits:
-          cpus: '0.2' # Example: Limit mobile to 20% of a core
+          cpus: '0.1' # Example: Limit mobile to 20% of a core
           memory: 256M # Example: Limit mobile RAM
     depends_on:
       gateway2:
@@ -532,6 +537,7 @@ services:
       - proxy_gateways_net
       - gateway1_mobiles_net
       - gateway2_mobiles_net
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
@@ -544,12 +550,9 @@ services:
       - "3000:3000"
     networks:
       - monitoring_net
-      - cloud_proxy_net
-      - proxy_gateways_net
-      - gateway1_mobiles_net
-      - gateway2_mobiles_net
     depends_on:
       - prometheus
+      - loki
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -559,6 +562,36 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest 
+    volumes:
+      - ./config/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring_net 
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest 
+    volumes:
+      - ./config/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro 
+      - promtail_positions:/tmp/positions 
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring_net 
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
+    restart: unless-stopped
 
 networks:
   cloud_proxy_net:
@@ -570,3 +603,5 @@ networks:
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
+  promtail_positions:

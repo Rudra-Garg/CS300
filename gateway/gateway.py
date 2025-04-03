@@ -1,12 +1,16 @@
+import math
 import os
 import time
 import requests
 import json
 import traceback
+import psutil
+import socket
 from flask import Flask, request, jsonify
-from prometheus_client import Counter, Histogram, start_http_server, make_wsgi_app
+from prometheus_client import Counter, Histogram, start_http_server, make_wsgi_app, Gauge
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from shared_modules.concentration_calculator_module import ConcentrationCalculatorModule
+from shared_modules.cpu_monitor import get_container_cpu_percent_non_blocking
 
 
 # --- Metrics (Add Forwarding Metrics) ---
@@ -16,7 +20,9 @@ FORWARD_TO_PROXY_COUNT = Counter('gateway_forward_to_proxy_total', 'Total reques
 FORWARD_TO_PROXY_LATENCY = Histogram('gateway_forward_to_proxy_latency_seconds', 'Latency for forwarding request to proxy')
 FORWARD_TO_PROXY_FAILURES = Counter('gateway_forward_to_proxy_failures_total', 'Failures forwarding to proxy')
 ERROR_COUNT = Counter('gateway_errors_total', 'Total number of processing errors')
-# ---
+CPU_UTILIZATION = Gauge('cpu_utilization_percent', 'Current CPU utilization percentage', ['container_name'])
+container_name = socket.gethostname()
+
 
 app = Flask(__name__)
 
@@ -41,6 +47,20 @@ def health_check():
 
 @app.route('/', methods=['POST'])
 def process_and_forward():
+    
+    # --- CPU Monitoring ---
+    cpu_info = get_container_cpu_percent_non_blocking()
+    if cpu_info:
+        normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
+        if not math.isnan(normalized_cpu):
+            CPU_UTILIZATION.labels(container_name=container_name).set(normalized_cpu)
+            # print(f"DEBUG Gateway CPU Norm: {normalized_cpu:.1f}%")
+        else:
+            CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
+    else:
+        CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
+    # --- End CPU Monitoring ---
+    
     REQUEST_COUNT.inc()
     calc_start_time = time.time()
     calc_result = None

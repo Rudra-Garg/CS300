@@ -1,4 +1,5 @@
 from prometheus_client import Counter, Gauge
+import os
 
 # Prometheus metrics
 EEG_DATA_PROCESSED = Counter('eeg_data_processed_total', 'Total number of EEG data points processed')

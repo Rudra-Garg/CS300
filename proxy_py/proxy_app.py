@@ -2,19 +2,28 @@ import os
 import time
 import json
 import traceback
+import psutil
+import math
+import socket
 from flask import Flask, request, jsonify
-from prometheus_client import Counter, Histogram, start_http_server, make_wsgi_app
+from prometheus_client import Counter, Histogram, start_http_server, make_wsgi_app, Gauge
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
+
 from shared_modules.connector_module import ConnectorModule
+from shared_modules.concentration_calculator_module import ConcentrationCalculatorModule 
+from shared_modules.cpu_monitor import get_container_cpu_percent_non_blocking
 
 
 # --- Metrics ---
 PROXY_REQUEST_COUNT = Counter('proxy_requests_total', 'Total requests received by proxy')
 PROXY_CONNECTOR_LATENCY = Histogram('proxy_connector_latency_seconds', 'Latency of connector processing')
 PROXY_ERROR_COUNT = Counter('proxy_errors_total', 'Total processing errors in proxy')
-# ---
+CPU_UTILIZATION = Gauge('cpu_utilization_percent', 'Current CPU utilization percentage', ['container_name'])
+container_name = socket.gethostname()
 
 app = Flask(__name__)
+
+
 
 # --- Instantiate Modules ---
 connector_module = ConnectorModule()
@@ -32,6 +41,19 @@ def health_check():
 # This endpoint receives the *result* from the gateway's calculator
 @app.route('/process', methods=['POST'])
 def process_calculator_result():
+    # --- CPU Monitoring ---
+    cpu_info = get_container_cpu_percent_non_blocking()
+    if cpu_info:
+        normalized_cpu = cpu_info.get('cpu_percent_normalized', math.nan)
+        if not math.isnan(normalized_cpu):
+            CPU_UTILIZATION.labels(container_name=container_name).set(normalized_cpu)
+            # print(f"DEBUG Gateway CPU Norm: {normalized_cpu:.1f}%")
+        else:
+            CPU_UTILIZATION.labels(container_name=container_name).set(-1.0)
+    else:
+        CPU_UTILIZATION.labels(container_name=container_name).set(-2.0)
+    # --- End CPU Monitoring ---
+    
     PROXY_REQUEST_COUNT.inc()
     connector_start_time = time.time()
     final_result = None
