@@ -3,7 +3,6 @@ import threading
 import time
 import json
 import traceback
-import psutil
 import math
 import socket
 from flask import Flask, request, jsonify

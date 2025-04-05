@@ -74,8 +74,8 @@ services:
     deploy: 
       resources:
         limits:
-          cpus: '0.1' # Limit proxy to 20% of one CPU core
-          memory: 512M # Limit proxy to 512 MB RAM
+          cpus: '0.1' 
+          memory: 512M 
     environment:
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
       - LATENCY_PROXY_TO_CLOUD=${LATENCY_PROXY_TO_CLOUD:-0ms}
@@ -112,8 +112,8 @@ services:
     deploy: 
       resources:
         limits:
-          cpus: '0.1' # Limit to 20% of one CPU core
-          memory: 512M # Limit to 512 MB RAM
+          cpus: '0.1'
+          memory: 512M 
     environment:
       - PROXY_URL=http://proxy_py:8000/process
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
@@ -155,12 +155,12 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "9092:8000"  # Changed from 9090 to 8000
-    deploy: # <-- ADD THIS SECTION
+      - "9092:8000"  
+    deploy: 
       resources:
         limits:
-          cpus: '0.1' # Limit to 20% of one CPU core
-          memory: 512M # Limit to 512 MB RAM
+          cpus: '0.1' 
+          memory: 512M 
     environment:
       - PROXY_URL=http://proxy_py:8000/process
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
@@ -198,7 +198,7 @@ services:
       - gateway1_mobiles_net
     # MERGE environment variables
     environment:
-      - GATEWAY=gateway1 # Keep existing ones
+      - GATEWAY=gateway1 
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       # Add the latency variables
@@ -215,11 +215,11 @@ services:
       - NET_ADMIN
     ports:
       - "9093:9090"
-    deploy: # <-- ADD THIS SECTION (Optional)
+    deploy: 
       resources:
         limits:
-          cpus: '0.05' # Example: Limit mobile to 20% of a core
-          memory: 256M # Example: Limit mobile RAM
+          cpus: '0.05' 
+          memory: 256M 
     depends_on:
       gateway1:
         condition: service_healthy
@@ -244,9 +244,8 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
-    # MERGE environment variables
     environment:
-      - GATEWAY=gateway1 # Keep existing ones
+      - GATEWAY=gateway1 
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       # Add the latency variables
@@ -263,11 +262,11 @@ services:
       - NET_ADMIN
     ports:
       - "9094:9090" 
-    deploy: # <-- ADD THIS SECTION (Optional)
+    deploy: 
       resources:
         limits:
-          cpus: '0.05' # Example: Limit mobile to 20% of a core
-          memory: 256M # Example: Limit mobile RAM
+          cpus: '0.05' 
+          memory: 256M 
     depends_on:
       gateway1:
         condition: service_healthy
@@ -284,9 +283,8 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
-    # MERGE environment variables
     environment:
-      - GATEWAY=gateway1 # Keep existing ones
+      - GATEWAY=gateway1 
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       # Add the latency variables
@@ -303,11 +301,11 @@ services:
       - NET_ADMIN
     ports:
       - "9096:9090" 
-    deploy: # <-- ADD THIS SECTION (Optional)
+    deploy:
       resources:
         limits:
-          cpus: '0.05' # Example: Limit mobile to 20% of a core
-          memory: 256M # Example: Limit mobile RAM
+          cpus: '0.05' 
+          memory: 256M 
     depends_on:
       gateway1:
         condition: service_healthy

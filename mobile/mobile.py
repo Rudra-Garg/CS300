@@ -5,7 +5,6 @@ import time
 import requests
 import json
 import random
-import psutil
 import socket
 import numpy as np
 from prometheus_client import start_http_server, make_wsgi_app, Gauge

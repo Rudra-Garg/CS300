@@ -5,7 +5,6 @@ import time
 import requests
 import json
 import traceback
-import psutil
 import socket
 from flask import Flask, request, jsonify
 from prometheus_client import Counter, Histogram, start_http_server, make_wsgi_app, Gauge
