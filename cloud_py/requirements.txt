@@ -1,0 +1,6 @@
+flask
+requests
+numpy   
+prometheus-client==0.17.1
+flask-prometheus-metrics==1.0.0
+PyYAML==6.0.1

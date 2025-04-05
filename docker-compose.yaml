@@ -1,24 +1,24 @@
 name: CS300
 services:
-  cloud:
-    build: ./cloud
-    networks:
-      - cloud_proxy_net
-    cap_add:
-      - NET_ADMIN
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    volumes:
-      - ./logs/cloud:/var/log/nginx
+  # cloud:
+  #   build: ./cloud
+  #   networks:
+  #     - cloud_proxy_net
+  #   cap_add:
+  #     - NET_ADMIN
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 60s
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+  #   volumes:
+  #     - ./logs/cloud:/var/log/nginx
 
   # proxy:
   #   build: ./proxy
@@ -55,6 +55,36 @@ services:
   #     - ./logs/proxy:/var/log/nginx
   #     - ./config:/app/config
 
+  cloud_py: 
+    build:
+      context: .
+      dockerfile: cloud_py/Dockerfile
+    networks:
+      - cloud_proxy_net # Connects only to the proxy network
+    cap_add:
+      - NET_ADMIN # Keep if needed for potential future network manipulation
+    ports:
+      - "8081:8000" # Expose cloud service on host port 8081 (internal 8000)
+    deploy:
+      resources:
+        limits:
+          cpus: '1' # Example: Give cloud more resources
+          memory: 1G
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CLOUD_PROCESSING_LEVEL=${CLOUD_PROCESSING_LEVEL:-3}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Should start faster than Nginx
+    logging:
+      driver: "json-file"
+      options:
+          max-size: "10m"
+          max-file: "3"
+
   proxy_py: # Renamed service for clarity
     build:
       context: .
@@ -63,9 +93,7 @@ services:
       - cloud_proxy_net    # Connects up to cloud
       - proxy_gateways_net # Connects down to gateways
     depends_on:
-      gateway1:
-        condition: service_healthy
-      gateway2:
+      cloud_py:
         condition: service_healthy
     cap_add:
       - NET_ADMIN 
@@ -82,6 +110,9 @@ services:
       - JITTER_PROXY_TO_CLOUD=${JITTER_PROXY_TO_CLOUD:-} # Pass empty if unset in .env
       - LOSS_PROXY_TO_CLOUD=${LOSS_PROXY_TO_CLOUD:-}
       - PYTHONUNBUFFERED=1
+      - PROXY_PROCESSING_LEVEL=${PROXY_PROCESSING_LEVEL:-3}
+      - CLOUD_URL=${CLOUD_URL:-http://cloud_py:8000/process}
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -109,6 +140,9 @@ services:
       - NET_ADMIN
     ports:
       - "9091:8000" 
+    depends_on:
+      proxy_py:
+          condition: service_healthy
     deploy: 
       resources:
         limits:
@@ -123,12 +157,7 @@ services:
       - LOSS_GATEWAY_TO_PROXY=${LOSS_GATEWAY_TO_PROXY:-}
       # Pass other necessary env vars if any (like PYTHONUNBUFFERED)
       - PYTHONUNBUFFERED=1
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - ENABLE_CLOUD_OFFLOAD=${ENABLE_CLOUD_OFFLOAD:-false}
-      - GATEWAY_CPU_LIMIT=${GATEWAY_CPU_LIMIT:-0.5}
-      - GATEWAY_LOAD_THRESHOLD=${GATEWAY_LOAD_THRESHOLD:-0.9}
-      - CLOUD_ENDPOINT=${CLOUD_ENDPOINT:-http://cloud/}
-
+      - GATEWAY_PROCESSING_LEVEL=${GATEWAY_PROCESSING_LEVEL:-2}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -156,6 +185,9 @@ services:
       - NET_ADMIN
     ports:
       - "9092:8000"  
+    depends_on:
+      proxy_py:
+          condition: service_healthy
     deploy: 
       resources:
         limits:
@@ -170,11 +202,8 @@ services:
       - LOSS_GATEWAY_TO_PROXY=${LOSS_GATEWAY_TO_PROXY:-}
       # Pass other necessary env vars if any (like PYTHONUNBUFFERED)
       - PYTHONUNBUFFERED=1
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - ENABLE_CLOUD_OFFLOAD=${ENABLE_CLOUD_OFFLOAD:-false}
-      - GATEWAY_CPU_LIMIT=${GATEWAY_CPU_LIMIT:-0.5}
-      - GATEWAY_LOAD_THRESHOLD=${GATEWAY_LOAD_THRESHOLD:-0.9}
-      - CLOUD_ENDPOINT=${CLOUD_ENDPOINT:-http://cloud/}
+      - GATEWAY_PROCESSING_LEVEL=${GATEWAY_PROCESSING_LEVEL:-2}
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -207,10 +236,12 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
-      # Add the placement strategy and load threshold variables
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      # # Add the placement strategy and load threshold variables
+      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
+
     cap_add:
       - NET_ADMIN
     ports:
@@ -255,9 +286,10 @@ services:
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
       # Add the placement strategy and load threshold variables
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
     cap_add:
       - NET_ADMIN
     ports:
@@ -294,9 +326,10 @@ services:
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
       # Add the placement strategy and load threshold variables
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
     cap_add:
       - NET_ADMIN
     ports:
@@ -334,9 +367,10 @@ services:
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
       # Add the placement strategy and load threshold variables
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
     cap_add:
       - NET_ADMIN
     ports:
@@ -374,9 +408,10 @@ services:
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
       # Add the placement strategy and load threshold variables
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
     cap_add:
       - NET_ADMIN
     ports:
@@ -414,9 +449,10 @@ services:
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
       # Add the placement strategy and load threshold variables
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
     cap_add:
       - NET_ADMIN
     ports:
@@ -457,6 +493,7 @@ services:
       - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
       - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
       - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
     cap_add:
       - NET_ADMIN
     ports:
@@ -494,9 +531,10 @@ services:
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
       # Add the placement strategy and load threshold variables
-      - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
+      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
+      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
+      - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
     cap_add:
       - NET_ADMIN
     ports:

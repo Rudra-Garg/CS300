@@ -28,3 +28,9 @@ scrape_configs:
     static_configs:
       - targets:
           - proxy_py:8000
+
+  - job_name: cloud 
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - cloud_py:8000
