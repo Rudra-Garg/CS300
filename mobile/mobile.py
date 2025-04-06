@@ -2,6 +2,7 @@ import math
 import os
 import threading
 import time
+import uuid
 import requests
 import json
 import socket
@@ -64,12 +65,12 @@ print(f"------------------------------------------")
 
 # --- Sensor Simulator (Keep as is) ---
 class SensorSimulator:
-    def __init__(self, transmission_time=0.1, sampling_rate=250):
+    def __init__(self, transmission_time=0.1, sampling_rate=250):   
         self.transmission_time = transmission_time
         self.last_transmission_time = 0
         self.sampling_rate = sampling_rate
-        self.base_amplitude = 50
-        self.noise_level = 0.1
+        self.base_amplitude = 1.0
+        self.noise_level = 0.001
 
     def generate_eeg_data(self):
         current_time = time.time()
@@ -81,7 +82,9 @@ class SensorSimulator:
         return {
             "eeg_values": eeg_signal.tolist(),
             "timestamp": current_time,
-            "sampling_rate": self.sampling_rate
+            "sampling_rate": self.sampling_rate,
+            "creation_time": time.time(),
+            "request_id": str(uuid.uuid4()),
         }
 # ---
 
@@ -187,6 +190,9 @@ if __name__ == '__main__':
             raw_eeg_data = sensor.generate_eeg_data()
             if not raw_eeg_data: continue
 
+            request_id = raw_eeg_data.get("request_id", "unknown") # Get ID for logging
+            print(f"Mobile ({container_name}) ReqID:{request_id[-6:]}: Generated data.")
+            
             level_received = 0 # Input is always L0 for mobile
             current_data = raw_eeg_data
             level_processed_here = 0 # Track highest level processed *in this service*
@@ -198,6 +204,7 @@ if __name__ == '__main__':
             # Level 1: Client
             if not processing_error and level_received < 1 and effective_mobile_processing_level >= 1 and client_module:
                 module_name = "client"
+                print(f"Mobile ({container_name}) ReqID:{request_id[-6:]}: Running {module_name} (L1)...")
                 try:
                     with MODULE_LATENCY.labels(tier=MY_TIER, module=module_name).time():
                         client_output = client_module.process_eeg(current_data)
@@ -219,6 +226,7 @@ if __name__ == '__main__':
             # Level 2: Calculator
             if not processing_error and level_received < 2 and effective_mobile_processing_level >= 2 and concentration_calculator:
                 module_name = "calculator"
+                print(f"Mobile ({container_name}) ReqID:{request_id[-6:]}: Running {module_name} (L2)...")
                 if level_processed_here < 1: # Check dependency
                     dep_error_msg = f"Mobile {module_name} (L2) needs L1 input, but only reached L{level_processed_here}."
                     MODULE_ERRORS.labels(tier=MY_TIER, module=module_name).inc()
@@ -239,6 +247,8 @@ if __name__ == '__main__':
             # Level 3: Connector
             if not processing_error and level_received < 3 and effective_mobile_processing_level >= 3 and connector_module:
                 module_name = "connector"
+                print(f"Mobile ({container_name}) ReqID:{request_id[-6:]}: Running {module_name} (L3)...")
+                
                 if level_processed_here < 2: # Check dependency
                     dep_error_msg = f"Mobile {module_name} (L3) needs L2 input, but only reached L{level_processed_here}."
                     MODULE_ERRORS.labels(tier=MY_TIER, module=module_name).inc()
@@ -247,6 +257,16 @@ if __name__ == '__main__':
                     try:
                         with MODULE_LATENCY.labels(tier=MY_TIER, module=module_name).time():
                             conn_output = connector_module.process_concentration_data(current_data)
+                        # --- CALCULATE AND RECORD E2E LATENCY ---
+                        if conn_output and 'error' not in conn_output:
+                            creation_time = current_data.get('creation_time')
+                            if creation_time:
+                                e2e_latency = time.time() - creation_time
+                                E2E_LATENCY.labels(final_tier=MY_TIER).observe(e2e_latency)
+                                print(f"Mobile ({container_name}) ReqID:{request_id[-6:]}: L3 Complete. E2E Latency: {e2e_latency:.4f}s")
+                            else:
+                                print(f"WARN ({container_name}) ReqID:{request_id[-6:]}: Missing creation_time for E2E latency calc.")
+                        # ---------------------------------------
                         if not conn_output or 'error' in conn_output: raise ValueError(f"{module_name} error: {conn_output.get('error', 'Unknown')}")
                         current_data = conn_output
                         level_processed_here = 3
@@ -270,7 +290,8 @@ if __name__ == '__main__':
                                 "payload": current_data,
                                 "last_processed_level": level_processed_here # Send the level achieved *here*
                             }
-                            print(f"Mobile ({container_name}): Sending data (processed up to L{level_processed_here}) to Gateway...")
+                            
+                            print(f"Mobile ({container_name}) ReqID:{request_id[-6:]}: Sending data (processed up to L{level_processed_here}) to Gateway...")
                             # Response handling can update local state if needed, e.g., display
                             response_from_upstream = gateway_connector.send_data(data_to_send)
                             if response_from_upstream and client_module:
@@ -280,7 +301,7 @@ if __name__ == '__main__':
                         else:
                             print(f"WARN ({container_name}): No Gateway URL, cannot send.")
                     else: # level_processed_here == 3
-                        print(f"Mobile ({container_name}): Processing finished locally (L3).")
+                        print(f"Mobile ({container_name}) ReqID:{request_id[-6:]}: Processing finished locally (L3). Not sending.")
                         if client_module: client_module.update_concentration_display(current_data) # Update display
                         # No send needed if mobile does everything
 

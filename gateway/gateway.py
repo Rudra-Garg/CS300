@@ -187,14 +187,26 @@ def process_mobile_data():
                 module_name = "connector"
                 print(f"Gateway ({container_name}): Running {module_name} (L3)...")
                 if level_processed_here < 2: # Check dependency
-                     dep_error_msg = f"Gateway {module_name} (L3) needs L2 input, but only reached L{level_processed_here}."
-                     MODULE_ERRORS.labels(tier=MY_TIER, module=module_name).inc()
-                     processing_error = True; final_response_to_mobile = ({"status":"dependency_error", "detail": dep_error_msg}), 500
-                     print(f"ERROR ({container_name}): {dep_error_msg}")
+                    dep_error_msg = f"Gateway {module_name} (L3) needs L2 input, but only reached L{level_processed_here}."
+                    MODULE_ERRORS.labels(tier=MY_TIER, module=module_name).inc()
+                    processing_error = True; final_response_to_mobile = ({"status":"dependency_error", "detail": dep_error_msg}), 500
+                    print(f"ERROR ({container_name}): {dep_error_msg}")
                 else:
                     try:
                         with MODULE_LATENCY.labels(tier=MY_TIER, module=module_name).time():
                             conn_output = connector_module.process_concentration_data(current_data)
+                        # --- CALCULATE AND RECORD E2E LATENCY ---
+                        if conn_output and 'error' not in conn_output:
+                            creation_time = current_data.get('creation_time') # Get from data BEFORE overwriting
+                            if creation_time:
+                                e2e_latency = time.time() - creation_time
+                                E2E_LATENCY.labels(final_tier=MY_TIER).observe(e2e_latency)
+                                print(f"Gateway ({container_name}) ReqID:{request_id[-6:]}: L3 Complete. E2E Latency: {e2e_latency:.4f}s")
+                            else:
+                                print(f"WARN ({container_name}) ReqID:{request_id[-6:]}: Missing creation_time for E2E latency calc.")
+                        # ---------------------------------------
+
+                        
                         if not conn_output or 'error' in conn_output: raise ValueError(f"{module_name} error: {conn_output.get('error', 'Unknown')}")
                         current_data = conn_output
                         level_processed_here = 3

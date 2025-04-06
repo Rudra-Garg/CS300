@@ -42,7 +42,7 @@ except ValueError:
     proxy_processing_level = 3
 effective_proxy_processing_level = max(0, proxy_processing_level)
 
-cloud_url = os.getenv('CLOUD_URL') # e.g., http://cloud_py:8000/process
+cloud_url = os.getenv('CLOUD_URL') # e.g., http://cloud_py:8000/
 
 print(f"--- Python Proxy Configuration ({container_name}) ---")
 print(f"Proxy Processing Level (Config): {proxy_processing_level}")
@@ -107,7 +107,7 @@ def health_check():
     return 'healthy', 200
 
 # Renamed endpoint, receives data from the GATEWAY
-@app.route('/process', methods=['POST'])
+@app.route('/', methods=['POST'])
 def process_gateway_data():
     PROXY_REQUEST_COUNT.inc()
     processing_start_time = time.time()
@@ -128,7 +128,8 @@ def process_gateway_data():
         level_received = incoming_data_full.get("last_processed_level", 0)
         current_data = incoming_data_full.get("payload")
         level_processed_here = level_received # Start assuming no processing here
-
+        
+        request_id = current_data.get("request_id", "unknown") if isinstance(current_data, dict) else "unknown"
         print(f"Proxy ({container_name}, L{effective_proxy_processing_level}): Received data processed up to L{level_received}.")
 
         # --- Check for Passthrough ---
@@ -192,6 +193,18 @@ def process_gateway_data():
                     try:
                         with MODULE_LATENCY.labels(tier=MY_TIER, module=module_name).time():
                             conn_output = connector_module.process_concentration_data(current_data)
+                        # --- CALCULATE AND RECORD E2E LATENCY ---
+                        if conn_output and 'error' not in conn_output:
+                            creation_time = current_data.get('creation_time') # Get from data BEFORE overwriting
+                            if creation_time:
+                                e2e_latency = time.time() - creation_time
+                                E2E_LATENCY.labels(final_tier=MY_TIER).observe(e2e_latency)
+                                print(f"Gateway ({container_name}) ReqID:{request_id[-6:]}: L3 Complete. E2E Latency: {e2e_latency:.4f}s")
+                            else:
+                                print(f"WARN ({container_name}) ReqID:{request_id[-6:]}: Missing creation_time for E2E latency calc.")
+                        # ---------------------------------------
+
+                        
                         if not conn_output or 'error' in conn_output: raise ValueError(f"{module_name} error: {conn_output.get('error', 'Unknown')}")
                         current_data = conn_output
                         level_processed_here = 3

@@ -13,7 +13,7 @@ class ClientModule:
         self.buffer = []
         self.last_send_time = 0
         self.send_interval = 0.1  # 100ms interval between sends
-        self.error_threshold = 0.99999  # 50% threshold for signal quality
+        self.error_threshold = 0.5  # 50% threshold for signal quality
 
     def process_eeg(self, eeg_data: Union[str, Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Process incoming EEG data and prepare it for transmission.
@@ -24,6 +24,8 @@ class ClientModule:
         Returns:
             Processed EEG data ready for transmission, or None if data is invalid
         """
+        original_request_id = None
+        original_creation_time = None
         try:
             # Parse input data if it's a string
             if isinstance(eeg_data, str):
@@ -40,7 +42,9 @@ class ClientModule:
             if not eeg_values:
                 print("Client Module: No EEG values found in data")
                 return None
-
+            
+            original_request_id = data.get('request_id')
+            original_creation_time = data.get('creation_time')
             # Quality check on EEG values
             quality_score = self._calculate_quality_score(eeg_values)
             EEG_QUALITY_SCORE.set(quality_score)
@@ -80,7 +84,10 @@ class ClientModule:
                     "quality_score": self._calculate_quality_score(eeg_values)
                 }
             }
-
+            if original_request_id:
+                processed_data['request_id'] = original_request_id
+            if original_creation_time:
+                processed_data['creation_time'] = original_creation_time
             print(f"Client Module: Sending processed data to Gateway")
             return processed_data
 
@@ -116,7 +123,7 @@ class ClientModule:
             # Simple quality metrics:
             # 1. Check for NaN or infinity values
             valid_values = [v for v in eeg_values if isinstance(v, (int, float)) 
-                          and not isinstance(v, bool) and -1e6 <= v <= 1e6]
+                        and not isinstance(v, bool) and -1e6 <= v <= 1e6]
             
             if not valid_values:
                 return 0.0

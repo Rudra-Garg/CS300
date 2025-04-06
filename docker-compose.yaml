@@ -111,7 +111,7 @@ services:
       - LOSS_PROXY_TO_CLOUD=${LOSS_PROXY_TO_CLOUD:-}
       - PYTHONUNBUFFERED=1
       - PROXY_PROCESSING_LEVEL=${PROXY_PROCESSING_LEVEL:-3}
-      - CLOUD_URL=${CLOUD_URL:-http://cloud_py:8000/process}
+      - CLOUD_URL=${CLOUD_URL:-http://cloud_py:8000}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -149,7 +149,7 @@ services:
           cpus: '0.1'
           memory: 512M 
     environment:
-      - PROXY_URL=http://proxy_py:8000/process
+      - PROXY_URL=http://proxy_py:8000/
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
       - LATENCY_GATEWAY_TO_PROXY=${LATENCY_GATEWAY_TO_PROXY:-0ms}
       # Pass jitter/loss if using them in entrypoint.sh
@@ -194,7 +194,7 @@ services:
           cpus: '0.1' 
           memory: 512M 
     environment:
-      - PROXY_URL=http://proxy_py:8000/process
+      - PROXY_URL=http://proxy_py:8000/
       - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
       - LATENCY_GATEWAY_TO_PROXY=${LATENCY_GATEWAY_TO_PROXY:-0ms}
       # Pass jitter/loss if using them in entrypoint.sh
@@ -236,10 +236,6 @@ services:
       # Pass jitter/loss if using them in entrypoint.sh
       - JITTER_MOBILE_TO_GATEWAY=${JITTER_MOBILE_TO_GATEWAY:-}
       - LOSS_MOBILE_TO_GATEWAY=${LOSS_MOBILE_TO_GATEWAY:-}
-      # # Add the placement strategy and load threshold variables
-      # - PLACEMENT_STRATEGY=${PLACEMENT_STRATEGY:-ewmp}
-      # - MOBILE_CPU_LIMIT=${MOBILE_CPU_LIMIT:-0.2}
-      # - MOBILE_LOAD_THRESHOLD=${MOBILE_LOAD_THRESHOLD:-0.8}
       - MOBILE_PROCESSING_LEVEL=${MOBILE_PROCESSING_LEVEL:-1}
 
     cap_add:

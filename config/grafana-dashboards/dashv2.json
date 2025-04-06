@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 2,
   "links": [],
   "liveNow": true,
   "panels": [
@@ -67,7 +67,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 3,
         "w": 5,
         "x": 0,
         "y": 1
@@ -78,6 +78,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "mean"
@@ -85,7 +86,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.6.0",
       "targets": [
@@ -114,18 +117,27 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
+          "decimals": 2,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green"
+              },
+              {
+                "color": "#EAB839",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
               }
             ]
           },
-          "unit": "reqps"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -135,12 +147,13 @@
         "x": 5,
         "y": 1
       },
-      "id": 102,
+      "id": 103,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -148,7 +161,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.6.0",
       "targets": [
@@ -158,15 +173,15 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(rate(module_executions_total{job=\"mobile\", module=\"client\"}[1m]))",
+          "expr": "(\n  sum(increase(module_errors_total[5m]))\n+ sum(increase(gateway_request_failures_total[5m]))\n+ sum(increase(gateway_forward_to_proxy_failures_total[5m]))\n+ sum(increase(proxy_forward_to_cloud_failures_total[5m]))\n)\n/ sum(increase(module_executions_total{module=\"client\"}[5m])) * 100\n",
           "format": "stat",
           "instant": true,
-          "legendFormat": "Input Rate (Client Exec)",
+          "legendFormat": "Overall Error %",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Total System Input Rate",
+      "title": "Overall System Error Rate (%)",
       "type": "stat"
     },
     {
@@ -192,34 +207,37 @@
               },
               {
                 "color": "red",
-                "value": 5
+                "value": 2
               }
             ]
           },
-          "unit": "percent"
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 6,
-        "w": 5,
+        "w": 7,
         "x": 10,
         "y": 1
       },
-      "id": 103,
+      "id": 104,
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.6.0",
       "targets": [
@@ -229,15 +247,28 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "( sum(rate(module_errors_total[5m])) + sum(rate(gateway_request_failures_total[5m])) + sum(rate(gateway_forward_to_proxy_failures_total[5m])) + sum(rate(proxy_forward_to_cloud_failures_total[5m])) ) / sum(rate(module_executions_total{module=\"client\"}[5m])) * 100",
+          "expr": "histogram_quantile(0.95, sum(rate(e2e_processing_latency_seconds_bucket[5m])) by (le, final_tier))",
           "format": "stat",
           "instant": true,
-          "legendFormat": "Overall Error %",
+          "legendFormat": "p95 ({{final_tier}})",
           "range": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(e2e_processing_latency_seconds_sum[5m])) by (final_tier) / sum(rate(e2e_processing_latency_seconds_count[5m])) by (final_tier)",
+          "format": "stat",
+          "instant": true,
+          "legendFormat": "Avg ({{final_tier}})",
+          "range": false,
+          "refId": "B"
         }
       ],
-      "title": "Overall System Error Rate (%)",
+      "title": "End-to-End Latency (L3 Completion)",
       "type": "stat"
     },
     {
@@ -264,14 +295,15 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 9,
-        "x": 15,
+        "w": 7,
+        "x": 17,
         "y": 1
       },
       "id": 400,
       "options": {
         "displayLabels": [
-          "name"
+          "name",
+          "percent"
         ],
         "legend": {
           "displayMode": "list",
@@ -287,6 +319,7 @@
           "values": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
@@ -299,8 +332,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by (tier) (rate(module_executions_total{module=\"connector\"}[1m]))",
-          "format": "table",
+          "expr": "sum by (tier) (increase(module_executions_total{module=\"connector\"}[5m]))",
           "instant": true,
           "legendFormat": "{{tier}}",
           "range": false,
@@ -309,6 +341,72 @@
       ],
       "title": "Final Processing Location (Connector Exec Rate by Tier)",
       "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 5,
+        "x": 0,
+        "y": 4
+      },
+      "id": 102,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(module_executions_total{module=\"client\"}[1m]))",
+          "format": "stat",
+          "instant": true,
+          "legendFormat": "Input Rate (Client Exec)",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Total System Input Rate",
+      "type": "stat"
     },
     {
       "collapsed": false,
@@ -334,13 +432,50 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "none"
             },
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "reqps"
         },
@@ -355,12 +490,15 @@
       "id": 401,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi"
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
       "pluginVersion": "11.6.0",
@@ -392,14 +530,50 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "none"
             },
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "lineInterpolation": "linear"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "s"
         },
@@ -414,12 +588,15 @@
       "id": 402,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi"
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
       "pluginVersion": "11.6.0",
@@ -451,12 +628,50 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
             "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "normal"
             },
-            "drawStyle": "bars"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "errps"
         },
@@ -471,11 +686,13 @@
       "id": 403,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
@@ -521,17 +738,41 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "none"
             },
-            "drawStyle": "line",
-            "lineInterpolation": "linear"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
-          "unit": "percent",
-          "min": 0,
+          "mappings": [],
           "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -547,7 +788,8 @@
                 "value": 95
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -560,15 +802,18 @@
       "id": 301,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -610,13 +855,50 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "none"
             },
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "reqps"
         },
@@ -631,12 +913,15 @@
       "id": 411,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi"
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
       "pluginVersion": "11.6.0",
@@ -680,14 +965,50 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "none"
             },
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "lineInterpolation": "linear"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "s"
         },
@@ -702,12 +1023,15 @@
       "id": 412,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi"
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
       "pluginVersion": "11.6.0",
@@ -739,12 +1063,50 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
             "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "normal"
             },
-            "drawStyle": "bars"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "errps"
         },
@@ -759,11 +1121,13 @@
       "id": 413,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
@@ -809,17 +1173,41 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
             "stacking": {
+              "group": "A",
               "mode": "none"
             },
-            "drawStyle": "line",
-            "lineInterpolation": "linear"
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
-          "unit": "percent",
-          "min": 0,
+          "mappings": [],
           "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -835,7 +1223,8 @@
                 "value": 95
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -848,15 +1237,18 @@
       "id": 302,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
@@ -898,13 +1290,13 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "drawStyle": "line",
             "fillOpacity": 15,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
             "stacking": {
               "mode": "none"
-            },
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            }
           },
           "unit": "reqps"
         },
@@ -967,14 +1359,14 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "stacking": {
-              "mode": "none"
-            },
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "lineInterpolation": "linear"
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none"
+            }
           },
           "unit": "s"
         },
@@ -1025,12 +1417,12 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "drawStyle": "bars",
             "fillOpacity": 80,
+            "lineWidth": 1,
             "stacking": {
               "mode": "normal"
-            },
-            "drawStyle": "bars"
+            }
           },
           "unit": "errps"
         },
@@ -1093,17 +1485,16 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "drawStyle": "line",
             "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
             "stacking": {
               "mode": "none"
-            },
-            "drawStyle": "line",
-            "lineInterpolation": "linear"
+            }
           },
-          "unit": "percent",
-          "min": 0,
           "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1119,7 +1510,8 @@
                 "value": 95
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -1182,13 +1574,13 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "drawStyle": "line",
             "fillOpacity": 15,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
             "stacking": {
               "mode": "none"
-            },
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            }
           },
           "unit": "reqps"
         },
@@ -1253,14 +1645,14 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "stacking": {
-              "mode": "none"
-            },
             "axisPlacement": "auto",
             "drawStyle": "line",
-            "lineInterpolation": "linear"
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none"
+            }
           },
           "unit": "s"
         },
@@ -1312,12 +1704,12 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "drawStyle": "bars",
             "fillOpacity": 80,
+            "lineWidth": 1,
             "stacking": {
               "mode": "normal"
-            },
-            "drawStyle": "bars"
+            }
           },
           "unit": "errps"
         },
@@ -1370,17 +1762,16 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 1,
+            "drawStyle": "line",
             "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
             "stacking": {
               "mode": "none"
-            },
-            "drawStyle": "line",
-            "lineInterpolation": "linear"
+            }
           },
-          "unit": "percent",
-          "min": 0,
           "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1396,7 +1787,8 @@
                 "value": 95
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -1456,13 +1848,13 @@
                 "mode": "palette-classic"
               },
               "custom": {
-                "lineWidth": 1,
+                "drawStyle": "line",
                 "fillOpacity": 10,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
                 "stacking": {
                   "mode": "none"
-                },
-                "drawStyle": "line",
-                "lineInterpolation": "linear"
+                }
               },
               "mappings": [],
               "max": 1,
@@ -1537,12 +1929,12 @@
                 "mode": "palette-classic"
               },
               "custom": {
-                "lineWidth": 1,
+                "drawStyle": "bars",
                 "fillOpacity": 80,
+                "lineWidth": 1,
                 "stacking": {
                   "mode": "normal"
-                },
-                "drawStyle": "bars"
+                }
               },
               "unit": "ops"
             },
@@ -1594,13 +1986,13 @@
                 "mode": "palette-classic"
               },
               "custom": {
-                "lineWidth": 1,
+                "drawStyle": "line",
                 "fillOpacity": 10,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
                 "stacking": {
                   "mode": "none"
-                },
-                "drawStyle": "line",
-                "lineInterpolation": "linear"
+                }
               },
               "unit": ""
             },
@@ -1662,8 +2054,9 @@
       "type": "row"
     }
   ],
+  "preload": false,
   "refresh": "10s",
-  "schemaVersion": 38,
+  "schemaVersion": 41,
   "tags": [
     "eeg",
     "fog",
@@ -1685,5 +2078,5 @@
   "timezone": "",
   "title": "EEG Fog Sim [Level-Based Processing]",
   "uid": "dashv2",
-  "version": 4
+  "version": 1
 }

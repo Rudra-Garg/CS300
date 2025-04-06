@@ -19,6 +19,8 @@ class ConcentrationCalculatorModule:
         Returns:
             Dict containing concentration level and metadata
         """
+        original_request_id = None
+        original_creation_time = None
         try:
             # Parse input data if it's a string
             if isinstance(sensor_data, str):
@@ -30,7 +32,9 @@ class ConcentrationCalculatorModule:
             eeg_values = data.get('eeg_values', [])
             if not eeg_values:
                 raise ValueError("No EEG values found in sensor data")
-
+            
+            original_request_id = data.get('request_id')
+            original_creation_time = data.get('creation_time')
             # Add to buffer and maintain window size
             self.buffer.extend(eeg_values)
             if len(self.buffer) > self.eeg_window_size:
@@ -56,16 +60,20 @@ class ConcentrationCalculatorModule:
                     "threshold": self.concentration_threshold
                 }
             }
-            
+            if original_request_id:
+                result['request_id'] = original_request_id
+            if original_creation_time:
+                result['creation_time'] = original_creation_time
             print(f"Concentration Calculator: Processed result = {result}")
             return result
 
         except Exception as e:
             print(f"Error calculating concentration: {str(e)}")
-            return {
-                "concentration_level": "ERROR",
-                "error": str(e)
-            }
+            error_result = { "error": str(e), "concentration_level": "ERROR" }
+            # Optionally add tracking fields to error result too?
+            if original_request_id: error_result['request_id'] = original_request_id
+            if original_creation_time: error_result['creation_time'] = original_creation_time
+            return error_result
 
     def _calculate_alpha_power(self, eeg_data: list) -> float:
         """Calculate the power in alpha frequency band (8-13 Hz).

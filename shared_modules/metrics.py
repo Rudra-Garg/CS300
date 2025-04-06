@@ -32,3 +32,8 @@ PASSTHROUGH_COUNT = Counter(
     'Number of requests passed through without processing',
     ['tier']
 )
+E2E_LATENCY = Histogram(
+    'e2e_processing_latency_seconds',
+    'End-to-end latency from data creation to final L3 processing completion',
+    ['final_tier'] # Label to indicate which tier finished L3
+)
