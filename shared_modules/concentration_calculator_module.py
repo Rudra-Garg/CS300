@@ -4,112 +4,52 @@ from typing import Dict, Any, Union
 
 class ConcentrationCalculatorModule:
     def __init__(self):
-        # Initialize thresholds and parameters based on iFogSim implementation
-        self.eeg_window_size = 100  # Number of EEG samples to analyze
-        self.concentration_threshold = 0.7  # Threshold for high concentration
-        self.sampling_rate = 250  # Hz, typical for EEG
+        self.eeg_window_size = 128  # Use a 1-second window
+        self.sampling_rate = 128    # CRITICAL: Update to match dataset
         self.buffer = []
 
-    def calculate_concentration(self, sensor_data: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
-        """Calculate concentration level from EEG sensor data.
-        
-        Args:
-            sensor_data: Raw EEG data from sensor, can be JSON string or dict
-            
-        Returns:
-            Dict containing concentration level and metadata
-        """
-        original_request_id = None
-        original_creation_time = None
-        try:
-            # Parse input data if it's a string
-            if isinstance(sensor_data, str):
-                data = json.loads(sensor_data)
-            else:
-                data = sensor_data
+    def _extract_band_powers(self, eeg_data: list) -> dict:
+        signal_array = np.array(eeg_data)
+        fft_vals = np.abs(np.fft.rfft(signal_array))
+        fft_freq = np.fft.rfftfreq(len(signal_array), 1.0/self.sampling_rate)
 
-            # Extract EEG values
-            eeg_values = data.get('eeg_values', [])
-            if not eeg_values:
-                raise ValueError("No EEG values found in sensor data")
-            
-            original_request_id = data.get('request_id')
-            original_creation_time = data.get('creation_time')
-            # Add to buffer and maintain window size
+        def get_power(low, high):
+            mask = (fft_freq >= low) & (fft_freq <= high)
+            return np.mean(fft_vals[mask]**2)
+
+        total_power = np.mean(fft_vals**2)
+        if total_power == 0: return {}
+        
+        return {
+            "alpha": get_power(8, 13) / total_power,
+            "beta": get_power(13, 30) / total_power,
+        }
+
+    def calculate_concentration(self, sensor_data: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            eeg_values = sensor_data.get('eeg_values', [])
+            if not eeg_values: raise ValueError("No EEG values found")
+
             self.buffer.extend(eeg_values)
             if len(self.buffer) > self.eeg_window_size:
                 self.buffer = self.buffer[-self.eeg_window_size:]
 
-            # Calculate concentration metrics
-            # Using signal power in alpha band (8-13 Hz) as concentration indicator
-            # Higher alpha power typically indicates relaxed attention/concentration
-            concentration_value = self._calculate_alpha_power(self.buffer)
-            
-            # Normalize concentration value to 0-1 range
-            normalized_concentration = min(1.0, max(0.0, concentration_value))
-            
-            # Determine concentration level
-            concentration_level = "HIGH" if normalized_concentration >= self.concentration_threshold else "LOW"
-            
-            result = {
-                "concentration_level": concentration_level,
-                "concentration_value": normalized_concentration,
-                "timestamp": data.get('timestamp', None),
-                "metadata": {
-                    "window_size": self.eeg_window_size,
-                    "threshold": self.concentration_threshold
-                }
-            }
-            if original_request_id:
-                result['request_id'] = original_request_id
-            if original_creation_time:
-                result['creation_time'] = original_creation_time
-            print(f"Concentration Calculator: Processed result = {result}")
-            return result
+            if len(self.buffer) < self.eeg_window_size:
+                return {"error": "Buffering data", "concentration_level": "BUFFERING"}
+
+            band_powers = self._extract_band_powers(self.buffer)
+            if not band_powers or band_powers.get("beta", 0) == 0:
+                return {"error": "Calculation error", "concentration_level": "ERROR"}
+
+            # Use Alpha / Beta ratio as a proxy for relaxed concentration
+            alpha_beta_ratio = band_powers["alpha"] / band_powers["beta"]
+            concentration_value = min(1.0, alpha_beta_ratio / 2.0) # Normalize roughly
+            concentration_level = "HIGH" if concentration_value > 0.6 else "LOW"
+
+            sensor_data["concentration_level"] = concentration_level
+            sensor_data["concentration_value"] = concentration_value
+            sensor_data["metadata"] = {"alpha_beta_ratio": alpha_beta_ratio}
+            return sensor_data
 
         except Exception as e:
-            print(f"Error calculating concentration: {str(e)}")
-            error_result = { "error": str(e), "concentration_level": "ERROR" }
-            # Optionally add tracking fields to error result too?
-            if original_request_id: error_result['request_id'] = original_request_id
-            if original_creation_time: error_result['creation_time'] = original_creation_time
-            return error_result
-
-    def _calculate_alpha_power(self, eeg_data: list) -> float:
-        """Calculate the power in alpha frequency band (8-13 Hz).
-        
-        Args:
-            eeg_data: List of EEG samples
-            
-        Returns:
-            Normalized power value in alpha band
-        """
-        try:
-            # Convert to numpy array for calculations
-            signal = np.array(eeg_data)
-            
-            # Apply FFT to get frequency components
-            fft_vals = np.abs(np.fft.rfft(signal))
-            fft_freq = np.fft.rfftfreq(len(signal), 1.0/self.sampling_rate)
-            
-            # Calculate power in alpha band (8-13 Hz)
-            alpha_mask = (fft_freq >= 8) & (fft_freq <= 13)
-            alpha_power = np.mean(fft_vals[alpha_mask]**2)
-            
-            # Normalize by total power
-            total_power = np.mean(fft_vals**2)
-            normalized_power = alpha_power / total_power if total_power > 0 else 0
-            
-            return normalized_power
-            
-        except Exception as e:
-            print(f"Error in alpha power calculation: {str(e)}")
-            return 0.0
-
-# Example Usage
-if __name__ == "__main__":
-    calculator = ConcentrationCalculatorModule()
-    data1 = "processed_valid_eeg_some_data"
-    calculator.calculate_concentration(data1)
-    data2 = "processed_invalid_eeg_error_data" # Example of invalid data - though Client Module should ideally filter this out
-    calculator.calculate_concentration(data2)
+            return {"error": str(e), "concentration_level": "ERROR"}

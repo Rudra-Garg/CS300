@@ -6,3 +6,4 @@ psutil
 prometheus-client
 flask-prometheus-metrics
 PyYAML
+scipy

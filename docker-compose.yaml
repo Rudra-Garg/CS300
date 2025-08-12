@@ -1,59 +1,20 @@
 name: CS300
 services:
-  # cloud:
-  #   build: ./cloud
-  #   networks:
-  #     - cloud_proxy_net
-  #   cap_add:
-  #     - NET_ADMIN
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost/health"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 60s
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "3"
-  #   volumes:
-  #     - ./logs/cloud:/var/log/nginx
+  redis:
+    image: "redis:alpine"
+    networks:
+      - eeg_stream_net
+    ports:
+      - "6379:6379"
 
-  # proxy:
-  #   build: ./proxy
-  #   networks:
-  #     - cloud_proxy_net
-  #     - proxy_gateways_net
-  #   cap_add:
-  #     - NET_ADMIN
-  #   ports:
-  #     - "9090:9090"
-  #   depends_on:
-  #     gateway1:
-  #       condition: service_healthy
-  #     gateway2:
-  #       condition: service_healthy
-  #   environment:
-  #     - ENABLE_LATENCY=${ENABLE_LATENCY:-false}
-  #     - LATENCY_PROXY_TO_CLOUD=${LATENCY_PROXY_TO_CLOUD:-0ms}
-  #     # Pass jitter/loss if using them in entrypoint.sh
-  #     - JITTER_PROXY_TO_CLOUD=${JITTER_PROXY_TO_CLOUD:-}
-  #     - LOSS_PROXY_TO_CLOUD=${LOSS_PROXY_TO_CLOUD:-}
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost/health"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 60s
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "3"
-  #   volumes:
-  #     - ./logs/proxy:/var/log/nginx
-  #     - ./config:/app/config
+  data_producer:
+    build: ./data_producer
+    networks:
+      - eeg_stream_net
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
 
   cloud_py: 
     build:
@@ -225,7 +186,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
-    # MERGE environment variables
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway1 
       - PYTHONUNBUFFERED=1
@@ -271,6 +232,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway1 
       - PYTHONUNBUFFERED=1
@@ -311,6 +273,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway1 
       - PYTHONUNBUFFERED=1
@@ -351,7 +314,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway1_mobiles_net
-    # MERGE environment variables
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway1 # Keep existing ones
       - PYTHONUNBUFFERED=1
@@ -392,7 +355,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
-    # MERGE environment variables
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
@@ -433,7 +396,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
-    # MERGE environment variables
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
@@ -474,7 +437,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
-    # MERGE environment variables
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
@@ -515,7 +478,7 @@ services:
       dockerfile: mobile/Dockerfile
     networks:
       - gateway2_mobiles_net
-    # MERGE environment variables
+      - eeg_stream_net
     environment:
       - GATEWAY=gateway2 # Keep existing ones
       - PYTHONUNBUFFERED=1
@@ -631,6 +594,7 @@ networks:
   gateway1_mobiles_net:
   gateway2_mobiles_net:
   monitoring_net:
+  eeg_stream_net:
 
 volumes:
   prometheus_data:

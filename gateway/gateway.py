@@ -126,7 +126,7 @@ def process_mobile_data():
         level_received = incoming_data_full.get("last_processed_level", 0)
         current_data = incoming_data_full.get("payload")
         level_processed_here = level_received # Start assuming no processing happens here
-
+        request_id = current_data.get("request_id", "unknown") if isinstance(current_data, dict) else "unknown"
         print(f"Gateway ({container_name}, L{effective_gateway_processing_level}): Received data processed up to L{level_received}.")
 
         # --- Check for Passthrough First ---
